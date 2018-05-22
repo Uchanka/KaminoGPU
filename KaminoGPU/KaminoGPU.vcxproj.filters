@@ -12,15 +12,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel\kernel.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="include\KaminoGPU.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\KaminoQuantity.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\KaminoSolver.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\KaminoHeader.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
@@ -56,5 +57,16 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="kernel\advection.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\projection.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\tdm.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

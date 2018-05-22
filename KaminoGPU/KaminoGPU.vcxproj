@@ -41,11 +41,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir)include;$(ProjectDir)partio_headers;$(ProjectDir)opencv_headers;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(ProjectDir)partio_headers;$(ProjectDir)opencv_headers;$(ProjectDir)cuda_util_headers;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)include;$(ProjectDir)partio_headers;$(ProjectDir)opencv_headers;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include;$(ProjectDir)partio_headers;$(ProjectDir)opencv_headers;$(ProjectDir)cuda_util_headers;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -85,9 +85,13 @@
   <ItemGroup>
     <ClInclude Include="include\KaminoGPU.h" />
     <ClInclude Include="include\KaminoQuantity.h" />
+    <ClInclude Include="include\KaminoSolver.h" />
+    <ClInclude Include="include\KaminoHeader.h" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel\kernel.cu" />
+    <CudaCompile Include="kernel\advection.cu" />
+    <CudaCompile Include="kernel\projection.cu" />
+    <CudaCompile Include="kernel\tdm.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
