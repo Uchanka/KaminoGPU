@@ -50,13 +50,13 @@
     <ClCompile Include="src\KaminoProjection.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\KaminoQuantity.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\KaminoSolver.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\KaminoQuantity.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\tdm.cu">
@@ -69,6 +69,9 @@
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoProjection.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoQuantity.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>
