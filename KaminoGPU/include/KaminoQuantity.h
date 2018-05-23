@@ -29,9 +29,6 @@ private:
 	fReal* gpuNextStep;
 	size_t nextStepPitch;
 
-	table2D tex;
-	/* Convert to texture */
-	void setTextureParams();
 	cudaChannelFormatDesc desc;
 	/* Get index */
 	//size_t getIndex(size_t phi, size_t theta);
@@ -39,7 +36,7 @@ private:
 public:
 	/* Constructor */
 	KaminoQuantity(std::string attributeName, size_t nPhi, size_t nTheta,
-		fReal gridLen, fReal phiOffset, fReal thetaOffset);
+		fReal phiOffset, fReal thetaOffset);
 	/* Destructor */
 	~KaminoQuantity();
 
@@ -47,9 +44,11 @@ public:
 	void swapGPUBuffer();
 	/* Copy the CPU end part to GPU */
 	void copyToGPU();
+	/* Copy backwards */
+	void copyBackToCPU();
 	/* Bind the texture */
-	void bindTexture();
-	void unbindTexture();
+	void bindTexture(table2D tex);
+	void unbindTexture(table2D tex);
 
 	/* Get its name */
 	std::string getName();
@@ -69,7 +68,6 @@ public:
 	fReal* getGPUThisStep();
 	fReal* getGPUNextStep();
 
-	table2D getTex();
 	size_t getThisStepPitch();
 	size_t getNextStepPitch();
 

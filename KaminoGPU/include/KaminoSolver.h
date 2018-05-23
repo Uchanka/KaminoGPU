@@ -7,10 +7,10 @@ class KaminoSolver
 private:
 	// Buffer for U, the fouriered coefs
 	// This pointer's for the pooled global memory (nTheta by nPhi)
-	Complex* gpuUPool;
+	ComplexFourier* gpuUPool;
 	// Buffer for V, the fouriered coefs
 	// This pointer's for the pooled global memory as well
-	Complex* gpuFPool;
+	ComplexFourier* gpuFPool;
 
 	/// Precompute these!
 	// nPhi by nTheta elements, but they should be retrieved by shared memories
@@ -47,13 +47,11 @@ private:
 	
 	KaminoQuantity* velTheta;
 	KaminoQuantity* velPhi;
+	KaminoQuantity* pressure;
 	void copyVelocity2GPU();
-	table2D texVelTheta;//bind to u
-	table2D texVelPhi;//bind to v
-	table2D texPressure;//bind to UPool after it's shifted
-	void defineTextureTable();
-	void bindVelocity2Tex();
-	void bindPressure2Tex();
+	void copyVelocityBack2CPU();
+	void bindVelocity2Tex(table2D phi, table2D theta);
+	void bindPressure2Tex(table2D pressure);
 
 	/* Something about time steps */
 	fReal frameDuration;
@@ -97,9 +95,13 @@ private:
 	/* Tri-diagonal matrix solver */
 	void TDMSolve(fReal* a, fReal* b, fReal* c, fReal* d);
 
+	//void mapPToSphere(Eigen::Matrix<float, 3, 1>& pos) const;
+	//void mapVToSphere(Eigen::Matrix<float, 3, 1>& pos, Eigen::Matrix<float, 3, 1>& vel) const;
+	/* Convert to texture */
+	static void setTextureParams(table2D tex);
 public:
 	
-	KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal gridLength, fReal frameDuration,
+	KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 		fReal A, int B, int C, int D, int E);
 	~KaminoSolver();
 

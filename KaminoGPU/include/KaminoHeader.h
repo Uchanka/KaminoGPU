@@ -13,6 +13,7 @@
 # include "device_launch_parameters.h"
 # include "helper_cuda.h"
 # include "cufft.h"
+//# include <Eigen/Eigen>
 
 //# define OMParallelize
 # ifdef OMParallelize
@@ -29,10 +30,10 @@
 # define DEBUGBUILD
 
 // The solution to switch between double and float
-typedef double fReal;
-typedef cufftDoubleComplex Complex;
+typedef float fReal;
+typedef cufftDoubleComplex ComplexFourier;
 
-typedef texture<fReal, 2, cudaReadModeElementType> table2D;
+typedef texture<float, 2, cudaReadModeElementType> table2D;
 
 const size_t byte2Bits = 8;
 
