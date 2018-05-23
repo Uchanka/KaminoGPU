@@ -1,5 +1,8 @@
 # include "../include/KaminoQuantity.h"
 
+cudaChannelFormatDesc KaminoQuantity::channelFormat
+= cudaCreateChannelDesc(sizeof(fReal) * byte2Bits, 0, 0, 0, cudaChannelFormatKindFloat);
+
 KaminoQuantity::KaminoQuantity(std::string attributeName, size_t nPhi, size_t nTheta, 
 	fReal gridLen, fReal phiOffset, fReal thetaOffset)
 	: nPhi(nPhi), nTheta(nTheta), gridLen(gridLen), invGridLen(1.0 / gridLen), 
@@ -7,16 +10,16 @@ KaminoQuantity::KaminoQuantity(std::string attributeName, size_t nPhi, size_t nT
 {
 	cpuBuffer = new fReal[nPhi * nTheta];
 
-	checkCudaErrors(cudaMalloc((void**)&gpuThisStep, nPhi * nTheta * sizeof(fReal)));
-	checkCudaErrors(cudaMalloc((void**)&gpuNextStep, nPhi * nTheta * sizeof(fReal)));
+	checkCudaErrors(cudaMallocArray(&gpuThisStep, &channelFormat, nPhi, nTheta));
+	checkCudaErrors(cudaMallocArray(&gpuNextStep, &channelFormat, nPhi, nTheta));
 }
 
 KaminoQuantity::~KaminoQuantity()
 {
 	delete[] cpuBuffer;
 
-	checkCudaErrors(cudaFree(gpuThisStep));
-	checkCudaErrors(cudaFree(gpuNextStep));
+	checkCudaErrors(cudaFreeArray(gpuThisStep));
+	checkCudaErrors(cudaFreeArray(gpuNextStep));
 }
 
 std::string KaminoQuantity::getName()
@@ -36,7 +39,7 @@ size_t KaminoQuantity::getNTheta()
 
 void KaminoQuantity::swapGPUBuffer()
 {
-	fReal* tempPtr = this->gpuThisStep;
+	cudaArray* tempPtr = this->gpuThisStep;
 	this->gpuThisStep = this->gpuNextStep;
 	this->gpuNextStep = tempPtr;
 }
@@ -68,6 +71,6 @@ fReal KaminoQuantity::getPhiOffset()
 
 void KaminoQuantity::copyToGPU()
 {
-	checkCudaErrors(cudaMemcpy((void*)this->cpuBuffer, (void*)this->gpuThisStep, 
-		sizeof(fReal) * nTheta * nPhi, ::cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpyToArray(this->gpuThisStep, 0, 0, this->cpuBuffer, 
+		sizeof(fReal) * nTheta * nPhi, cudaMemcpyHostToDevice));
 }

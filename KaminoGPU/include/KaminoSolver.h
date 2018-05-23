@@ -5,30 +5,28 @@
 class KaminoSolver
 {
 private:
-	// Buffer for the capital U
-	fReal* gpuFourierUReal;
-	fReal* gpuFourierUImag;
-	// Buffer for the divergence, before the transform
-	fReal* gpuBefFourierF;
+	// Buffer for U, the fouriered coefs
+	// This pointer's for the pooled global memory (nTheta by nPhi)
+	Complex* gpuUPool;
+	// Buffer for V, the fouriered coefs
+	// This pointer's for the pooled global memory as well
+	Complex* gpuFPool;
 
-	// Buffer for the divergence, F n theta.
-	fReal* gpuFourieredFReal;
-	fReal* gpuFourieredFImag;
-	// Diagonal elements a (lower);
+	/// Precompute these!
+	// nPhi by nTheta elements, but they should be retrieved by shared memories
+	// in the TDM kernel we solve nTheta times with each time nPhi elements.
 	fReal* gpuA;
 	// Diagonal elements b (major diagonal);
 	fReal* gpuB;
 	// Diagonal elements c (upper);
 	fReal* gpuC;
-	// Divergence fourier coefficients
-	fReal* gpuDReal;
-	fReal* gpuDImag;
-	// GPU side implementation wouldn't be in-place so...
-	fReal* gpuXReal;
-	fReal* gpuXImag;
+	void precomputeABCCoef();
 
 	/* Grid types */
-	gridType* gridTypes;
+	gridType* cpuGridTypesBuffer;
+	gridType* gpuGridTypes;
+	void copyGridType2GPU();
+
 	/* Grid dimensions */
 	size_t nPhi;
 	size_t nTheta;
@@ -44,27 +42,29 @@ private:
 	int B, C, D, E;
 
 	/* So that it remembers all these attributes within */
-	std::map<std::string, KaminoQuantity*> centeredAttr;
-	std::map<std::string, KaminoQuantity*> staggeredAttr;
+	//std::map<std::string, KaminoQuantity*> centeredAttr;
+	//std::map<std::string, KaminoQuantity*> staggeredAttr;
+	
+	KaminoQuantity* velTheta;
+	KaminoQuantity* velPhi;
+	void copyVelocity2GPU();
+	table2D texVelTheta;//bind to u
+	table2D texVelPhi;//bind to v
+	table2D texPressure;//bind to UPool after it's shifted
+	void defineTextureTable();
+	void bindVelocity2Tex();
+	void bindPressure2Tex();
 
 	/* Something about time steps */
 	fReal frameDuration;
 	fReal timeStep;
 	fReal timeElapsed;
 
-	void resetPoleVelocities();
-	void averageVelocities();
-	void solvePolarVelocities();
-
 	// Is it solid? or fluid? or even air?
 	gridType getGridTypeAt(size_t x, size_t y);
 
-	// We only have to treat uTheta differently
-	void advectAttrAt(KaminoQuantity* attr, size_t gridPhi, size_t gridTheta);
-
-	void advectionScalar();
-	void advectionSpeed();
-
+	/// Kernel calling from here
+	void advection();
 	void geometric();
 	void projection();
 	void bodyForce();
@@ -78,12 +78,9 @@ private:
 
 	/* distribute initial velocity values at grid points */
 	void initialize_velocity();
-	/* initialize pressure attribute */
-	void initialize_pressure();
-	/* initialize density distribution */
-	void initialize_density();
 	/* which grids are solid? */
 	void initialize_boundary();
+
 	/* sum of sine functions for velocity initialization */
 	fReal fPhi(const fReal x);
 	/* */
@@ -108,8 +105,8 @@ public:
 
 	void stepForward(fReal timeStep);
 
-	void addCenteredAttr(std::string name, fReal xOffset = 0.5, fReal yOffset = 0.5);
-	void addStaggeredAttr(std::string name, fReal xOffset, fReal yOffset);
+	//void addCenteredAttr(std::string name, fReal phiOffset = 0.0, fReal thetaOffset = 0.5);
+	//void addStaggeredAttr(std::string name, fReal phiOffset, fReal thetaOffset);
 
 	KaminoQuantity* getAttributeNamed(std::string name);
 	KaminoQuantity* operator[](std::string name);

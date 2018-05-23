@@ -1,13 +1,4 @@
-# include "../include/KaminoQuantity.h"
-
-void KaminoSolver::initialize_pressure()
-{
-	for (size_t i = 0; i < nPhi; ++i) {
-		for (size_t j = 0; j < nTheta; ++j) {
-			centeredAttr["p"]->setValueAt(i, j, 0.0);
-		}
-	}
-}
+# include "../include/KaminoSolver.h"
 
 void KaminoSolver::initialize_velocity()
 {

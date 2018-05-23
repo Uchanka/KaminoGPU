@@ -59,13 +59,16 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel\advection.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="kernel\projection.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="kernel\tdm.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\simpleCUFFT.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoAdvection.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoProjection.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>

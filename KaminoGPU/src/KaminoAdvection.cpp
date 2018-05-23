@@ -1,5 +1,4 @@
-# include "../include/KaminoQuantity.h"
-
+# include "../include/KaminoSolver.h"
 
 void KaminoSolver::advectAttrAt(KaminoQuantity* attr, size_t gridPhi, size_t gridTheta)
 {

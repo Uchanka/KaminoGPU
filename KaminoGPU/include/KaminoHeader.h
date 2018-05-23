@@ -9,8 +9,10 @@
 # include "Partio.h"
 
 # include "cuda_runtime.h"
+# include "helper_functions.h"
 # include "device_launch_parameters.h"
 # include "helper_cuda.h"
+# include "cufft.h"
 
 //# define OMParallelize
 # ifdef OMParallelize
@@ -28,6 +30,11 @@
 
 // The solution to switch between double and float
 typedef double fReal;
+typedef cufftDoubleComplex Complex;
+
+typedef texture<fReal, 2, cudaReadModeElementType> table2D;
+
+const size_t byte2Bits = 8;
 
 const fReal density = 1000.0;
 const fReal uSolid = 0.0;

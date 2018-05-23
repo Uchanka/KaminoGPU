@@ -24,8 +24,8 @@ private:
 	/* Initial buffer at client side */
 	fReal* cpuBuffer;
 	/* Double buffer at server side */
-	fReal* gpuThisStep;
-	fReal* gpuNextStep;
+	cudaArray* gpuThisStep;
+	cudaArray* gpuNextStep;
 
 	/* Get index */
 	//size_t getIndex(size_t phi, size_t theta);
@@ -59,4 +59,6 @@ public:
 	/* Get the offset */
 	fReal getPhiOffset();
 	fReal getThetaOffset();
+
+	static cudaChannelFormatDesc channelFormat;
 };

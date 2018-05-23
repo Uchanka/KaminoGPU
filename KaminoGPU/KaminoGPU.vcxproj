@@ -89,8 +89,9 @@
     <ClInclude Include="include\KaminoHeader.h" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel\advection.cu" />
-    <CudaCompile Include="kernel\projection.cu" />
+    <CudaCompile Include="kernel\KaminoAdvection.cu" />
+    <CudaCompile Include="kernel\KaminoProjection.cu" />
+    <CudaCompile Include="kernel\simpleCUFFT.cu" />
     <CudaCompile Include="kernel\tdm.cu" />
   </ItemGroup>
   <ItemGroup>

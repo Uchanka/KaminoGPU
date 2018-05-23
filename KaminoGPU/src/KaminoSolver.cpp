@@ -1,4 +1,4 @@
-# include "../include/KaminoQuantity.h"
+# include "../include/KaminoSolver.h"
 # include "../include/CubicSolver.h"
 
 // CONSTRUCTOR / DESTRUCTOR >>>>>>>>>>
@@ -9,64 +9,101 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal gridL
 	timeStep(0.0), timeElapsed(0.0),
 	A(A), B(B), C(C), D(D), E(E)
 {
-	this->beffourierF = new fReal[nPhi * nTheta];
-	this->fourieredFReal = new fReal[nPhi * nTheta];
-	this->fourieredFImag = new fReal[nPhi * nTheta];
-	this->fourierUReal = new fReal[nPhi * nTheta];
-	this->fourierUImag = new fReal[nPhi * nTheta];
+	/// Replace it later with functions from helper_cuda.h!
+	checkCudaErrors(cudaSetDevice(0));
 
-	this->a = new fReal[nTheta];
-	this->b = new fReal[nTheta];
-	this->c = new fReal[nTheta];
-	this->dReal = new fReal[nTheta];
-	this->dImag = new fReal[nTheta];
+	checkCudaErrors(cudaMalloc((void **)&gpuUPool,
+		sizeof(Complex) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuFPool,
+		sizeof(Complex) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)(&gpuA),
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)(&gpuB),
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)(&gpuC),
+		sizeof(fReal) * nPhi * nTheta));
+	precomputeABCCoef();
 
-	addStaggeredAttr("u", -0.5, 0.5);		// u velocity
-	addStaggeredAttr("v", 0.0, 0.0);		// v velocity
-	addCenteredAttr("p", 0.0, 0.5);			// p pressure
-	addCenteredAttr("density", 0.0, 0.5);	// density
+	this->velPhi = new KaminoQuantity("velPhi", nPhi, nTheta,
+		gridLen, -0.5, 0.5);
+	this->velTheta = new KaminoQuantity("velTheta", nPhi, nTheta - 1,
+		gridLen, 0.0, 1.0);
 
-	this->gridTypes = new gridType[nPhi * nTheta];
+	this->cpuGridTypesBuffer = new gridType[nPhi * nTheta];
+	checkCudaErrors(cudaMalloc((void **)(this->gpuGridTypes),
+		sizeof(gridType) * nPhi * nTheta));
 	
 	initialize_velocity();
-	initialize_pressure();
-	initialize_density();
-	//initialize_boundary();
+	copyVelocity2GPU();
+
+	initialize_boundary();
+	copyGridType2GPU();
 }
 
 KaminoSolver::~KaminoSolver()
 {
-	delete[] beffourierF;
-	delete[] fourieredFReal;
-	delete[] fourieredFImag;
-	delete[] fourierUReal;
-	delete[] fourierUImag;
+	checkCudaErrors(cudaFree(gpuFPool));
+	checkCudaErrors(cudaFree(gpuUPool));
+	checkCudaErrors(cudaFree(gpuA));
+	checkCudaErrors(cudaFree(gpuB));
+	checkCudaErrors(cudaFree(gpuC));
 
-	delete[] a;
-	delete[] b;
-	delete[] c;
-	delete[] dReal;
-	delete[] dImag;
+	delete this->velPhi;
+	delete this->velTheta;
 
-	for (auto& attr : this->centeredAttr)
+	delete[] cpuGridTypesBuffer;
+	checkCudaErrors(cudaFree(gpuGridTypes));
+}
+
+void KaminoSolver::copyVelocity2GPU()
+{
+	velPhi->copyToGPU();
+	velTheta->copyToGPU();
+}
+
+void KaminoSolver::bindPressure2Tex()
+{
+
+}
+void KaminoSolver::bindVelocity2Tex()
+{
+
+}
+void KaminoSolver::defineTextureTable()
+{
+	texVelPhi.addressMode[0] = cudaAddressModeWrap;
+	texVelPhi.addressMode[1] = cudaAddressModeMirror;
+	texVelPhi.filterMode = cudaFilterModeLinear;
+	texVelPhi.normalized = true;    // access with normalized texture coordinates
+
+	texVelTheta.addressMode[0] = cudaAddressModeWrap;
+	texVelTheta.addressMode[1] = cudaAddressModeMirror;
+	texVelTheta.filterMode = cudaFilterModeLinear;
+	texVelTheta.normalized = true;    // access with normalized texture coordinates
+
+	texPressure.addressMode[0] = cudaAddressModeWrap;
+	texPressure.addressMode[1] = cudaAddressModeMirror;
+	texPressure.filterMode = cudaFilterModeLinear;
+	texPressure.normalized = true;    // access with normalized texture coordinates
+}
+
+void KaminoSolver::precomputeABCCoef()
+{
+	fReal* cpuABuffer = new fReal[nTheta];
+	fReal* cpuBBuffer = new fReal[nTheta];
+	fReal* cpuCBuffer = new fReal[nTheta];
+
+	for (size_t thetaI = 0; thetaI < nTheta; ++thetaI)
 	{
-		delete attr.second;
 	}
-	for (auto& attr : this->staggeredAttr)
-	{
-		delete attr.second;
-	}
-	delete[] this->gridTypes;
 }
 
 void KaminoSolver::stepForward(fReal timeStep)
 {
 	this->timeStep = timeStep;
-	advectionScalar();
-	advectionSpeed();
+	advection();
 	//std::cout << "Advection completed" << std::endl;
-	this->swapAttrBuffers();
-
+	swapAttrBuffers();
 	geometric(); // Buffer is swapped here
 	//std::cout << "Geometric completed" << std::endl;
 	//bodyForce();
@@ -100,18 +137,7 @@ bool validatePhiTheta(fReal & phi, fReal & theta)
 
 void KaminoSolver::bodyForce()
 {
-	fReal gravity = 9.8;
-	KaminoQuantity* v = staggeredAttr["v"];
-
-	for(size_t j = 0; j < nTheta + 1; ++j){
-		for(size_t i = 0; i < nPhi; ++i){
-			fReal vBeforeUpdate = v->getValueAt(i, j);
-			fReal theta = j*gridLen;
-			v->writeValueTo(i, j, vBeforeUpdate + gravity * sin(theta) * timeStep);
-		}
-	}
-
-	v->swapBuffer();
+	/// This is just a place holder now...
 }
 
 /* Tri-diagonal matrix solver */
@@ -138,38 +164,9 @@ void KaminoSolver::TDMSolve(fReal* a, fReal* b, fReal* c, fReal* d)
     }
 }
 
-/* Duplicate of getIndex() in KaminoQuantity */
-size_t KaminoSolver::getIndex(size_t x, size_t y)
-{
-	return y * nPhi + x;
-}
-
 gridType KaminoSolver::getGridTypeAt(size_t x, size_t y)
 {
-	return gridTypes[getIndex(x, y)];
-}
-
-
-void KaminoSolver::addCenteredAttr(std::string name, fReal xOffset, fReal yOffset)
-{
-	size_t attrnPhi = this->nPhi;
-	size_t attrnTheta = this->nTheta;
-
-	KaminoQuantity* ptr = new KaminoQuantity(name, attrnPhi, attrnTheta, this->gridLen, xOffset, yOffset);
-	this->centeredAttr.emplace(std::pair<std::string, KaminoQuantity*>(name, ptr));
-}
-
-void KaminoSolver::addStaggeredAttr(std::string name, fReal xOffset, fReal yOffset)
-{
-	size_t attrnPhi = this->nPhi;
-	size_t attrnTheta = this->nTheta;
-	// Is the staggered attribute uTheta?
-	if (name == "v")
-	{
-		attrnTheta += 1;
-	}
-	KaminoQuantity* ptr = new KaminoQuantity(name, attrnPhi, attrnTheta, this->gridLen, xOffset, yOffset);
-	this->staggeredAttr.emplace(std::pair<std::string, KaminoQuantity*>(name, ptr));
+	return this->cpuGridTypesBuffer[getIndex(x, y)];
 }
 
 KaminoQuantity* KaminoSolver::getAttributeNamed(std::string name)
@@ -177,28 +174,9 @@ KaminoQuantity* KaminoSolver::getAttributeNamed(std::string name)
 	return (*this)[name];
 }
 
-KaminoQuantity* KaminoSolver::operator[](std::string name)
-{
-	if (centeredAttr.find(name) == centeredAttr.end())
-	{
-		return staggeredAttr.at(name);
-	}
-	else
-	{
-		return centeredAttr.at(name);
-	}
-}
-
 void KaminoSolver::swapAttrBuffers()
 {
-	for (auto quantity : this->centeredAttr)
-	{
-		quantity.second->swapBuffer();
-	}
-	for (auto quantity : this->staggeredAttr)
-	{
-		quantity.second->swapBuffer();
-	}
+	
 }
 
 
