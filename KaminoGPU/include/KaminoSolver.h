@@ -10,12 +10,17 @@ table2D texPressure;
 class KaminoSolver
 {
 private:
+	// Handle for batched FFT
+	cufftHandle kaminoPlan;
+
 	// Buffer for U, the fouriered coefs
 	// This pointer's for the pooled global memory (nTheta by nPhi)
-	ComplexFourier* gpuUPool;
+	ComplexFourier* gpuUPressure;
+	ComplexFourier* gpuUFourier;
 	// Buffer for V, the fouriered coefs
 	// This pointer's for the pooled global memory as well
-	ComplexFourier* gpuFPool;
+	ComplexFourier* gpuFDivergence;
+	ComplexFourier* gpuFFourier;
 
 	/// Precompute these!
 	// nPhi by nTheta elements, but they should be retrieved by shared memories

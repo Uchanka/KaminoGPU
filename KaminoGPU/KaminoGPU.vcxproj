@@ -89,6 +89,7 @@
     <ClInclude Include="include\KaminoHeader.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="KaminoProjection.cu" />
     <CudaCompile Include="kernel\KaminoAdvection.cu" />
     <CudaCompile Include="kernel\KaminoGeometric.cu" />
     <CudaCompile Include="kernel\KaminoProjection.cu" />
@@ -102,7 +103,6 @@
     <ClCompile Include="src\CubicSolver.cpp" />
     <ClCompile Include="src\Kamino.cpp" />
     <ClCompile Include="src\KaminoFFT.cpp" />
-    <ClCompile Include="src\KaminoGeometry.cpp" />
     <ClCompile Include="src\KaminoInit.cpp" />
     <ClCompile Include="src\KaminoParticles.cpp" />
     <ClCompile Include="src\KaminoProjection.cpp" />

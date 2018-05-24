@@ -25,7 +25,18 @@
 # define M_2PI			6.28318530717958647692  /* 2pi */
 # define M_hPI			1.57079632679489661923  /* pi / 2*/
 
-# define getIndex(phi, theta) (phi * nTheta + theta)
+# define centeredPhiOffset 0.0
+# define centeredThetaOffset 0.5
+# define vPhiPhiNorm M_2PI;
+# define vPhiThetaNorm M_PI;
+# define vThetaPhiNorm M_2PI;
+# define vThetaThetaNorm (M_PI - 2 * gridLen)
+# define vPhiPhiOffset -0.5
+# define vPhiThetaOffset 0.5
+# define vThetaPhiOffset 0.0
+# define vThetaThetaOffset 1.0
+
+# define getIndex(phi, theta) (theta * nPhi + phi)
 
 # define DEBUGBUILD
 

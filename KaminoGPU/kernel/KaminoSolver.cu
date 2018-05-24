@@ -3,6 +3,8 @@
 
 // CONSTRUCTOR / DESTRUCTOR >>>>>>>>>>
 
+const int fftRank = 1;
+
 KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 	fReal A, int B, int C, int D, int E) :
 	nPhi(nPhi), nTheta(nTheta), radius(radius), gridLen(M_2PI / nPhi), invGridLen(1.0 / gridLen), frameDuration(frameDuration),
@@ -12,10 +14,16 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	/// Replace it later with functions from helper_cuda.h!
 	checkCudaErrors(cudaSetDevice(0));
 
-	checkCudaErrors(cudaMalloc((void **)&gpuUPool,
+	checkCudaErrors(cudaMalloc((void **)&gpuUFourier,
 		sizeof(ComplexFourier) * nPhi * nTheta));
-	checkCudaErrors(cudaMalloc((void **)&gpuFPool,
+	checkCudaErrors(cudaMalloc((void **)&gpuUPressure,
 		sizeof(ComplexFourier) * nPhi * nTheta));
+
+	checkCudaErrors(cudaMalloc((void **)&gpuFFourier,
+		sizeof(ComplexFourier) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuFDivergence,
+		sizeof(ComplexFourier) * nPhi * nTheta));
+
 	checkCudaErrors(cudaMalloc((void **)(&gpuA),
 		sizeof(fReal) * nPhi * nTheta));
 	checkCudaErrors(cudaMalloc((void **)(&gpuB),
@@ -25,11 +33,11 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	precomputeABCCoef();
 
 	this->velPhi = new KaminoQuantity("velPhi", nPhi, nTheta,
-		-0.5, 0.5);
+		vPhiPhiOffset, vPhiThetaOffset);
 	this->velTheta = new KaminoQuantity("velTheta", nPhi, nTheta - 1,
-		0.0, 1.0);
+		vThetaPhiOffset, vThetaThetaOffset);
 	this->pressure = new KaminoQuantity("p", nPhi, nTheta,
-		0.0, 0.5);
+		centeredPhiOffset, centeredThetaOffset);
 
 	this->cpuGridTypesBuffer = new gridType[nPhi * nTheta];
 	checkCudaErrors(cudaMalloc((void **)(this->gpuGridTypes),
@@ -45,18 +53,30 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	setTextureParams(texVelTheta);
 	//setTextureParams(texBeingAdvected);
 	setTextureParams(texPressure);
+
+	int sigLenArr[1];
+	sigLenArr[0] = nPhi;
+	checkCudaErrors(cufftPlanMany(&kaminoPlan, fftRank, sigLenArr,
+		NULL, 1, nPhi,
+		NULL, 1, nPhi,
+		CUFFT_C2C, nTheta));
 }
 
 KaminoSolver::~KaminoSolver()
 {
-	checkCudaErrors(cudaFree(gpuFPool));
-	checkCudaErrors(cudaFree(gpuUPool));
+	checkCudaErrors(cudaFree(gpuUFourier));
+	checkCudaErrors(cudaFree(gpuUPressure));
+
+	checkCudaErrors(cudaFree(gpuFFourier));
+	checkCudaErrors(cudaFree(gpuFDivergence));
+	
 	checkCudaErrors(cudaFree(gpuA));
 	checkCudaErrors(cudaFree(gpuB));
 	checkCudaErrors(cudaFree(gpuC));
 
 	delete this->velPhi;
 	delete this->velTheta;
+	delete this->pressure;
 
 	delete[] cpuGridTypesBuffer;
 	checkCudaErrors(cudaFree(gpuGridTypes));

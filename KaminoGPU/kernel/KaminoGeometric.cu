@@ -3,15 +3,14 @@
 __global__ void geometricPhiKernel
 (fReal* attributeOutput,
 	size_t nTheta, size_t nPhi, size_t nPitch,
-	fReal phiOffset, fReal thetaOffset,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gPhi = ((fReal)phiId + phiOffset) * gridLen;
-	fReal gTheta = ((fReal)thetaId + thetaOffset) * gridLen;
+	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLen;
+	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
 	// The factor
 	fReal factor = timeStep * cosf(gTheta) / (radius * sinf(gTheta));
 
@@ -31,15 +30,14 @@ __global__ void geometricPhiKernel
 __global__ void geometricThetaKernel
 (fReal* attributeOutput,
 	size_t nTheta, size_t nPhi, size_t nPitch,
-	fReal phiOffset, fReal thetaOffset, fReal gridLen,
-	fReal radius, fReal timeStep)
+	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gPhi = ((fReal)phiId + phiOffset) * gridLen;
-	fReal gTheta = ((fReal)thetaId + thetaOffset) * gridLen;
+	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
+	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
 	// The factor
 	fReal factor = timeStep * cosf(gTheta) / (radius * sinf(gTheta));
 
@@ -64,11 +62,13 @@ void KaminoSolver::geometric()
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
 	geometricPhiKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch(),
-		velPhi->getPhiOffset(), velPhi->getThetaOffset(), gridLen, radius, timeStep);
+	(velPhi->getGPUNextStep(), velPhi->getNTheta(),
+		velPhi->getNPhi(), velPhi->getNextStepPitch(),
+		gridLen, radius, timeStep);
 	geometricThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
-		velTheta->getPhiOffset(), velTheta->getThetaOffset(), gridLen, radius, timeStep);
+	(velTheta->getGPUNextStep(),
+		velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
+		gridLen, radius, timeStep);
 
 	velPhi->unbindTexture(texVelPhi);
 	velTheta->unbindTexture(texVelTheta);

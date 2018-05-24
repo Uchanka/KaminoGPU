@@ -35,9 +35,6 @@
     <ClCompile Include="src\KaminoFFT.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\KaminoGeometry.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\KaminoInit.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -69,6 +66,9 @@
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoGeometric.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="KaminoProjection.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>
