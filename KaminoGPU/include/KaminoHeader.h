@@ -31,7 +31,7 @@
 
 // The solution to switch between double and float
 typedef float fReal;
-typedef cufftDoubleComplex ComplexFourier;
+typedef cufftComplex ComplexFourier;
 
 typedef texture<float, 2, cudaReadModeElementType> table2D;
 

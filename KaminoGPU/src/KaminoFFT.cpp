@@ -1,4 +1,4 @@
-# include "../include/KaminoQuantity.h"
+# include "../include/KaminoSolver.h"
 # include <fstream>
 
 void KaminoSolver::fillDivergence()

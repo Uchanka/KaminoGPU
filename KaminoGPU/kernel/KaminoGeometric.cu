@@ -3,8 +3,8 @@
 __global__ void geometricPhiKernel
 (fReal* attributeOutput,
 	size_t nTheta, size_t nPhi, size_t nPitch,
-	fReal phiOffset, fReal thetaOffset, fReal gridLen,
-	fReal radius, fReal timeStep)
+	fReal phiOffset, fReal thetaOffset,
+	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
 	int phiId = threadIdx.x;

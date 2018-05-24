@@ -3,8 +3,9 @@
 __global__ void advectionKernel
 	(fReal* attributeOutput,
 	size_t nTheta, size_t nPhi, size_t nPitch,
-	fReal phiOffset, fReal thetaOffset, fReal gridLen,
-	fReal radius, fReal timeStep, fReal phiNorm, fReal thetaNorm)
+	fReal phiOffset, fReal thetaOffset,
+	fReal gridLen, fReal radius, fReal timeStep,
+	fReal phiNorm, fReal thetaNorm)
 {
 	// Index
     int phiId = threadIdx.x;
@@ -73,6 +74,7 @@ void KaminoSolver::advection()
 	advectionKernel<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch(),
 		velPhi->getPhiOffset(), velPhi->getThetaOffset(), gridLen, radius, timeStep, phiNorm, thetaNorm);
+	velPhi->unbindTexture(texBeingAdvected);
 
 	// Advect Theta
 	velTheta->bindTexture(texBeingAdvected);
@@ -84,6 +86,7 @@ void KaminoSolver::advection()
 	advectionKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
 		velTheta->getPhiOffset(), velTheta->getThetaOffset(), gridLen, radius, timeStep, phiNorm, thetaNorm);
+	velTheta->unbindTexture(texBeingAdvected);
 
 	velPhi->unbindTexture(texVelPhi);
 	velTheta->unbindTexture(texVelTheta);
