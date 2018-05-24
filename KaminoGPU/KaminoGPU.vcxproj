@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\KaminoAdvection.cu" />
+    <CudaCompile Include="kernel\KaminoGeometric.cu" />
     <CudaCompile Include="kernel\KaminoProjection.cu" />
     <CudaCompile Include="kernel\KaminoQuantity.cu" />
     <CudaCompile Include="kernel\KaminoSolver.cu" />
@@ -100,7 +101,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\CubicSolver.cpp" />
     <ClCompile Include="src\Kamino.cpp" />
-    <ClCompile Include="src\KaminoAdvection.cpp" />
     <ClCompile Include="src\KaminoFFT.cpp" />
     <ClCompile Include="src\KaminoGeometry.cpp" />
     <ClCompile Include="src\KaminoInit.cpp" />

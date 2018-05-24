@@ -1,4 +1,4 @@
-# include "../include/KaminoQuantity.h"
+# include "../include/KaminoSolver.h"
 # include "../include/CubicSolver.h"
 
 void KaminoSolver::geometric()

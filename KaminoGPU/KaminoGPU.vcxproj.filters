@@ -26,9 +26,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\KaminoAdvection.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\CubicSolver.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -69,6 +66,9 @@
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoSolver.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoGeometric.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>

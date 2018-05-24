@@ -2,6 +2,11 @@
 
 # include "KaminoQuantity.h"
 
+table2D texVelPhi;
+table2D texVelTheta;
+table2D texBeingAdvected;
+table2D texPressure;
+
 class KaminoSolver
 {
 private:
