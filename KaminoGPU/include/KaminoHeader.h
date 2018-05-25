@@ -13,6 +13,8 @@
 # include "device_launch_parameters.h"
 # include "helper_cuda.h"
 # include "cufft.h"
+# include "aVector.h"
+
 //# include <Eigen/Eigen>
 
 //# define OMParallelize

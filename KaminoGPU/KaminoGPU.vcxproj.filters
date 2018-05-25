@@ -24,6 +24,9 @@
     <ClInclude Include="include\KaminoHeader.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\aVector.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\CubicSolver.cpp">
@@ -32,25 +35,19 @@
     <ClCompile Include="src\Kamino.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\KaminoFFT.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\KaminoInit.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\KaminoParticles.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\KaminoProjection.cpp">
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\aVector.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\tdm.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="kernel\simpleCUFFT.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoAdvection.cu">

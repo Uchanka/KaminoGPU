@@ -108,8 +108,8 @@ private:
 	/* Tri-diagonal matrix solver */
 	void TDMSolve(fReal* a, fReal* b, fReal* c, fReal* d);
 
-	//void mapPToSphere(Eigen::Matrix<float, 3, 1>& pos) const;
-	//void mapVToSphere(Eigen::Matrix<float, 3, 1>& pos, Eigen::Matrix<float, 3, 1>& vel) const;
+	void mapPToSphere(vec3& pos) const;
+	void mapVToSphere(vec3& pos, vec3& vel) const;
 	/* Convert to texture */
 	static void setTextureParams(table2D tex);
 public:

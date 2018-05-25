@@ -145,6 +145,7 @@ void KaminoSolver::precomputeABCCoef()
 	dim3 blockLayout = dim3(nTheta);
 	precomputeABCKernel<<<gridLayout, blockLayout>>>
 	(this->gpuA, this->gpuB, this->gpuC, gridLen, nPhi, nTheta);
+	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 }
 
@@ -247,14 +248,14 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	std::cout << "Writing to: " << file << std::endl;
 
 	Partio::ParticlesDataMutable* parts = Partio::create();
-	Partio::ParticleAttribute pH, vH, psH, dens;
+	Partio::ParticleAttribute pH, vH;// , psH, dens;
 	pH = parts->addAttribute("position", Partio::VECTOR, 3);
 	vH = parts->addAttribute("v", Partio::VECTOR, 3);
-	psH = parts->addAttribute("pressure", Partio::VECTOR, 1);
-	dens = parts->addAttribute("density", Partio::VECTOR, 1);
+	//psH = parts->addAttribute("pressure", Partio::VECTOR, 1);
+	//dens = parts->addAttribute("density", Partio::VECTOR, 1);
 
-	Eigen::Matrix<float, 3, 1> pos;
-	Eigen::Matrix<float, 3, 1> vel;
+	vec3 pos;
+	vec3 vel;
 	fReal pressure, densityValue;
 	fReal velX, velY;
 
@@ -276,26 +277,18 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 			velX = (uLeft + uRight) / 2.0;
 			velY = (vUp + vDown) / 2.0;
 
-			pos = Eigen::Matrix<float, 3, 1>(i * gridLen, j * gridLen, 0.0);
-			vel = Eigen::Matrix<float, 3, 1>(0.0, velY, velX);
+			pos = vec3(i * gridLen, j * gridLen, 0.0);
+			vel = vec3(0.0, velY, velX);
 			mapVToSphere(pos, vel);
 			mapPToSphere(pos);
-
-			pressure = centeredAttr["p"]->getValueAt(i, j);
-			densityValue = centeredAttr["density"]->getValueAt(i, j);
 
 			int idx = parts->addParticle();
 			float* p = parts->dataWrite<float>(pH, idx);
 			float* v = parts->dataWrite<float>(vH, idx);
-			float* ps = parts->dataWrite<float>(psH, idx);
-			float* de = parts->dataWrite<float>(dens, idx);
-
-			ps[0] = density * radius * pressure / timeStep;
-			de[0] = densityValue;
-
+			
 			for (int k = 0; k < 3; ++k) {
-				p[k] = pos(k, 0);
-				v[k] = vel(k, 0);
+				p[k] = pos[k];
+				v[k] = vel[k];
 			}
 		}
 	}
@@ -304,7 +297,7 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	parts->release();
 }
 
-void KaminoSolver::mapPToSphere(Eigen::Matrix<float, 3, 1>& pos) const
+void KaminoSolver::mapPToSphere(vec3& pos) const
 {
 	float theta = pos[1];
 	float phi = pos[0];
@@ -313,7 +306,7 @@ void KaminoSolver::mapPToSphere(Eigen::Matrix<float, 3, 1>& pos) const
 	pos[1] = radius * cos(theta);
 }
 
-void KaminoSolver::mapVToSphere(Eigen::Matrix<float, 3, 1>& pos, Eigen::Matrix<float, 3, 1>& vel) const
+void KaminoSolver::mapVToSphere(vec3& pos, vec3& vel) const
 {
 	float theta = pos[1];
 	float phi = pos[0];

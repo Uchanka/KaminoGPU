@@ -83,6 +83,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\aVector.h" />
     <ClInclude Include="include\KaminoGPU.h" />
     <ClInclude Include="include\KaminoQuantity.h" />
     <ClInclude Include="include\KaminoSolver.h" />
@@ -94,17 +95,15 @@
     <CudaCompile Include="kernel\KaminoProjection.cu" />
     <CudaCompile Include="kernel\KaminoQuantity.cu" />
     <CudaCompile Include="kernel\KaminoSolver.cu" />
-    <CudaCompile Include="kernel\simpleCUFFT.cu" />
     <CudaCompile Include="kernel\tdm.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\aVector.cpp" />
     <ClCompile Include="src\CubicSolver.cpp" />
     <ClCompile Include="src\Kamino.cpp" />
-    <ClCompile Include="src\KaminoFFT.cpp" />
     <ClCompile Include="src\KaminoInit.cpp" />
     <ClCompile Include="src\KaminoParticles.cpp" />
-    <ClCompile Include="src\KaminoProjection.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
