@@ -9,7 +9,6 @@ __global__ void geometricPhiKernel
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLen;
 	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
 	// The factor
 	fReal factor = timeStep * cosf(gTheta) / (radius * sinf(gTheta));
@@ -36,7 +35,6 @@ __global__ void geometricThetaKernel
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
 	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
 	// The factor
 	fReal factor = timeStep * cosf(gTheta) / (radius * sinf(gTheta));
@@ -65,13 +63,17 @@ void KaminoSolver::geometric()
 	(velPhi->getGPUNextStep(), velPhi->getNTheta(),
 		velPhi->getNPhi(), velPhi->getNextStepPitch(),
 		gridLen, radius, timeStep);
+	checkCudaErrors(cudaGetLastError());
+
 	geometricThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(),
 		velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
 		gridLen, radius, timeStep);
+	checkCudaErrors(cudaGetLastError());
 
 	velPhi->unbindTexture(texVelPhi);
 	velTheta->unbindTexture(texVelTheta);
 
+	checkCudaErrors(cudaDeviceSynchronize());
 	swapAttrBuffers();
 }

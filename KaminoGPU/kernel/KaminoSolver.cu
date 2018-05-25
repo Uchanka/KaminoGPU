@@ -16,13 +16,17 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 
 	checkCudaErrors(cudaMalloc((void **)&gpuUFourier,
 		sizeof(ComplexFourier) * nPhi * nTheta));
-	checkCudaErrors(cudaMalloc((void **)&gpuUPressure,
-		sizeof(ComplexFourier) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuUReal,
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuUImag,
+		sizeof(fReal) * nPhi * nTheta));
 
 	checkCudaErrors(cudaMalloc((void **)&gpuFFourier,
 		sizeof(ComplexFourier) * nPhi * nTheta));
-	checkCudaErrors(cudaMalloc((void **)&gpuFDivergence,
-		sizeof(ComplexFourier) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuFReal,
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuFImag,
+		sizeof(fReal) * nPhi * nTheta));
 
 	checkCudaErrors(cudaMalloc((void **)(&gpuA),
 		sizeof(fReal) * nPhi * nTheta));
@@ -65,10 +69,12 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 KaminoSolver::~KaminoSolver()
 {
 	checkCudaErrors(cudaFree(gpuUFourier));
-	checkCudaErrors(cudaFree(gpuUPressure));
+	checkCudaErrors(cudaFree(gpuUReal));
+	checkCudaErrors(cudaFree(gpuUImag));
 
 	checkCudaErrors(cudaFree(gpuFFourier));
-	checkCudaErrors(cudaFree(gpuFDivergence));
+	checkCudaErrors(cudaFree(gpuFReal));
+	checkCudaErrors(cudaFree(gpuFImag));
 	
 	checkCudaErrors(cudaFree(gpuA));
 	checkCudaErrors(cudaFree(gpuB));
@@ -106,16 +112,40 @@ void KaminoSolver::bindVelocity2Tex(table2D phi, table2D theta)
 	this->velTheta->bindTexture(theta);
 }
 
+__global__ void precomputeABCKernel
+(fReal* A, fReal* B, fReal* C, fReal gridLen, int nPhi, int nTheta)
+{
+	int nIndex = blockIdx.x;
+	int n = nIndex - nPhi / 2;
+	int i = threadIdx.x;
+	int index = nIndex * nTheta + i;
+	fReal thetaI = (i + centeredThetaOffset) * gridLen;
+
+	fReal cosThetaI = cosf(thetaI);
+	fReal sinThetaI = sinf(thetaI);
+
+	if (n != 0)
+	{
+		A[index] = 1.0 / (gridLen * gridLen)
+			- 0.5 * cosThetaI / gridLen / sinThetaI;
+		B[index] = -2.0 / (gridLen * gridLen) - n * n / (sinThetaI * sinThetaI);
+		C[index] = 1.0 / (gridLen * gridLen) + 0.5 * cosThetaI / gridLen / sinThetaI;
+	}
+	else
+	{
+		A[index] = 0.0;
+		B[index] = 1.0;
+		C[index] = 0.0;
+	}
+}
+
 void KaminoSolver::precomputeABCCoef()
 {
-	fReal* cpuABuffer = new fReal[nTheta * nPhi];
-	fReal* cpuBBuffer = new fReal[nTheta * nPhi];
-	fReal* cpuCBuffer = new fReal[nTheta * nPhi];
-
-	for (size_t thetaI = 0; thetaI < nTheta; ++thetaI)
-	{
-
-	}
+	dim3 gridLayout = dim3(nPhi);
+	dim3 blockLayout = dim3(nTheta);
+	precomputeABCKernel<<<gridLayout, blockLayout>>>
+	(this->gpuA, this->gpuB, this->gpuC, gridLen, nPhi, nTheta);
+	checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void KaminoSolver::stepForward(fReal timeStep)

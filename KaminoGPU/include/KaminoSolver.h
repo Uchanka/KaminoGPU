@@ -15,12 +15,15 @@ private:
 
 	// Buffer for U, the fouriered coefs
 	// This pointer's for the pooled global memory (nTheta by nPhi)
-	ComplexFourier* gpuUPressure;
 	ComplexFourier* gpuUFourier;
+	fReal* gpuUReal;
+	fReal* gpuUImag;
+
 	// Buffer for V, the fouriered coefs
 	// This pointer's for the pooled global memory as well
-	ComplexFourier* gpuFDivergence;
 	ComplexFourier* gpuFFourier;
+	fReal* gpuFReal;
+	fReal* gpuFImag;
 
 	/// Precompute these!
 	// nPhi by nTheta elements, but they should be retrieved by shared memories

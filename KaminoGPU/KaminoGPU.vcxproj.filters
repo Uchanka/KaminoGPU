@@ -68,8 +68,5 @@
     <CudaCompile Include="kernel\KaminoGeometric.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="KaminoProjection.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
   </ItemGroup>
 </Project>

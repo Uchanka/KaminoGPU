@@ -116,26 +116,25 @@ void KaminoSolver::advection()
 	///kernel call goes here
 	// Advect Phi
 	velPhi->bindTexture(texBeingAdvected);
-	fReal phiNorm = M_2PI;
-	fReal thetaNorm = M_PI;
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
 	advectionVPhiKernel<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch(),
 	gridLen, radius, timeStep);
-	velPhi->unbindTexture(texBeingAdvected);
+	checkCudaErrors(cudaGetLastError());
 
 	// Advect Theta
-	velTheta->bindTexture(texBeingAdvected);
+	
 	//texBeingAdvected = texVelTheta;
-	phiNorm = M_2PI;
-	thetaNorm = M_PI - 2 * gridLen;
+	velTheta->bindTexture(texBeingAdvected);
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	advectionVThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
 	gridLen, radius, timeStep);
-	velTheta->unbindTexture(texBeingAdvected);
+	checkCudaErrors(cudaGetLastError());
+
+	checkCudaErrors(cudaDeviceSynchronize());
 
 	velPhi->unbindTexture(texVelPhi);
 	velTheta->unbindTexture(texVelTheta);

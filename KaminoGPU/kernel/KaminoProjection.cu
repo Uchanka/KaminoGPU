@@ -1,5 +1,7 @@
 # include "../include/KaminoSolver.h"
 
+__global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *d_x);
+
 __global__ void fillDivergenceKernel
 (ComplexFourier* outputF,
 	size_t nTheta, size_t nPhi,
@@ -58,11 +60,37 @@ __global__ void fillDivergenceKernel
 	outputF[gridThetaId * nPhi + gridPhiId] = f;
 }
 
-__global__ void shiftF
-(ComplexFourier* input, ComplexFourier*output, size_t nTheta, size_t nPhi)
+__global__ void shiftFKernel
+(ComplexFourier* FFourierInput, fReal* FFourierShiftedReal, fReal* FFourierShiftedImag,
+	size_t nTheta, size_t nPhi)
+{
+	int nIdx = threadIdx.x;
+	int thetaIdx = blockIdx.x;
+	int fftIndex = nPhi / 2 - nIdx;
+	if (fftIndex < 0)
+		fftIndex += nPhi;
+	//FFourierShifted[thetaIdx * nPhi + phiIdx] = FFourierInput[thetaIdx * nPhi + fftIndex];
+	FFourierShiftedReal[nIdx * nTheta + thetaIdx] = FFourierInput[thetaIdx * nPhi + fftIndex].x;
+	FFourierShiftedImag[nIdx * nTheta + thetaIdx] = FFourierInput[thetaIdx * nPhi + fftIndex].y;
+}
+
+__global__ void copy2UFourier
+(ComplexFourier* UFourierOutput, fReal* UFourierReal, fReal* UFourierImag,
+	size_t nTheta, size_t nPhi)
+{
+	int nIdx = threadIdx.x;
+	int thetaIdx = blockIdx.x;
+	UFourierOutput[thetaIdx * nPhi + nIdx].x = UFourierReal[nIdx * nTheta + thetaIdx];
+	UFourierOutput[thetaIdx * nPhi + nIdx].y = UFourierImag[nIdx * nTheta + thetaIdx];
+}
+
+__global__ void shiftUKernel
+(ComplexFourier* FFourierInput, fReal* FFourierShiftedReal, fReal* FFourierShiftedImag,
+	size_t nTheta, size_t nPhi)
 {
 
 }
+
 
 void KaminoSolver::projection()
 {
@@ -72,10 +100,53 @@ void KaminoSolver::projection()
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
-	(gpuFPool, 
+	(gpuFFourier, 
 		nTheta, nPhi,
 		gridLen, radius, timeStep);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 
-	checkCudaErrors(cufftExecC2C(this->kaminoPlan,
-		gpuFDivergence, gpuFFourier, CUFFT_INVERSE));
+
+
+	checkCudaErrors((cudaError)cufftExecC2C(this->kaminoPlan,
+		gpuFFourier, gpuFFourier, CUFFT_INVERSE));
+	checkCudaErrors(cudaGetLastError());
+
+
+
+	shiftFKernel<<<gridLayout, blockLayout>>>
+	(gpuFFourier, gpuFReal, gpuFImag, nTheta, nPhi);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	// Now gpuFDivergence stores all the Fn
+
+
+
+	gridLayout = dim3(nPhi);
+	blockLayout = dim3(nTheta / 2);
+	const unsigned sharedMemSize = nTheta * 5 * sizeof(fReal);
+	crKernel<<<gridLayout, blockLayout, sharedMemSize>>>
+	(this->gpuA, this->gpuB, this->gpuC, this->gpuFReal, this->gpuUReal);
+	checkCudaErrors(cudaGetLastError());
+	crKernel<<<gridLayout, blockLayout, sharedMemSize>>>
+	(this->gpuA, this->gpuB, this->gpuC, this->gpuFImag, this->gpuUImag);
+	checkCudaErrors(cudaGetLastError());
+
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
+
+	gridLayout = dim3(nTheta);
+	blockLayout = dim3(nPhi);
+	copy2UFourier<<<gridLayout, blockLayout>>>
+	(this->gpuUFourier, this->gpuUReal, this->gpuUImag, nTheta, nPhi);
+	checkCudaErrors(cudaGetLastError());
+
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
+
+	checkCudaErrors((cudaError)cufftExecC2C(this->kaminoPlan,
+		gpuUFourier, gpuUFourier, CUFFT_FORWARD));
+	checkCudaErrors(cudaGetLastError());
 }
