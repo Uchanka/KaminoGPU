@@ -55,7 +55,7 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 
 	setTextureParams(texVelPhi);
 	setTextureParams(texVelTheta);
-	//setTextureParams(texBeingAdvected);
+	setTextureParams(texBeingAdvected);
 	setTextureParams(texPressure);
 
 	int sigLenArr[1];

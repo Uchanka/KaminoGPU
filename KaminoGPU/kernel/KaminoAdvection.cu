@@ -102,11 +102,6 @@ __global__ void advectionVThetaKernel
 	attributeOutput[thetaId * nPitch + phiId] = advectedVal;
 };
 
-/*(fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitch,
-	fReal phiOffset, fReal thetaOffset, fReal gridLen,
-	fReal radius, fReal timeStep, fReal phiNorm, fReal thetaNorm);*/
-
 void KaminoSolver::advection()
 {
 	//bindVelocity2Tex(texVelPhi, texVelTheta);

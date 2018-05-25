@@ -31,6 +31,8 @@
 # define vPhiThetaNorm M_PI;
 # define vThetaPhiNorm M_2PI;
 # define vThetaThetaNorm (M_PI - 2 * gridLen)
+# define pressurePhiNorm M_2PI
+# define pressureThetaNorm M_PI
 # define vPhiPhiOffset -0.5
 # define vPhiThetaOffset 0.5
 # define vThetaPhiOffset 0.0

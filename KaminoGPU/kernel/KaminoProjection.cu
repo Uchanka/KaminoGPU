@@ -85,12 +85,79 @@ __global__ void copy2UFourier
 }
 
 __global__ void shiftUKernel
-(ComplexFourier* FFourierInput, fReal* FFourierShiftedReal, fReal* FFourierShiftedImag,
-	size_t nTheta, size_t nPhi)
+(ComplexFourier* UFourierInput, fReal* pressure,
+	size_t nTheta, size_t nPhi, size_t nPressurePitch)
 {
-
+	int phiIdx = threadIdx.x;
+	int thetaIdx = blockIdx.x;
+	int fftIndex = 0;
+	fReal zeroComponent = UFourierInput[thetaIdx * nPhi + nPhi / 2].x;
+	if (phiIdx != 0)
+		fftIndex = nPhi - phiIdx;
+	fReal pressureVal = 0.0;
+	int bit = 0;
+	if (phiIdx & 2 == 0)
+		bit = 1;
+	else
+		bit = -1;
+	pressureVal = bit * UFourierInput[thetaIdx * nPhi + phiIdx].x - zeroComponent;
+	pressure[thetaIdx * nPressurePitch + phiIdx] = pressureVal;
 }
 
+__global__ void applyPressureTheta
+(fReal* output,
+	size_t nTheta, size_t nPhi,
+	fReal gridLen)
+{
+	int thetaId = threadIdx.x;
+	int phiId = blockIdx.x;
+
+	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
+	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
+	fReal thetaSouth = gTheta + 0.5 * gridLen;
+	fReal thetaNorth = gTheta - 0.5 * gridLen;
+
+	fReal texPhi = (fReal)phiId / nPhi;
+	fReal texTheta = (fReal)thetaId / nTheta;
+	fReal texThetaNorth = (thetaNorth - vThetaThetaOffset * gridLen) / pressureThetaNorm;
+	fReal texThetaSouth = (thetaSouth - vThetaThetaOffset * gridLen) / pressureThetaNorm;
+
+	fReal previousVTheta = tex2D(texVelTheta, texPhi, texTheta);
+	fReal pressureNorth = tex2D(texPressure, texPhi, texThetaNorth);
+	fReal pressureSouth = tex2D(texPressure, texPhi, texThetaSouth);
+
+	fReal pressureTheta = pressureSouth - pressureNorth;
+	fReal deltaVTheta = -pressureTheta / gridLen;
+
+	output[thetaId * nPhi + phiId] = previousVTheta + deltaVTheta;
+}
+__global__ void applyPressurePhi
+(fReal* output,
+	size_t nTheta, size_t nPhi,
+	fReal gridLen)
+{
+	int thetaId = threadIdx.x;
+	int phiId = blockIdx.x;
+
+	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLen;
+	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
+	fReal phiEast = gPhi + 0.5 * gridLen;
+	fReal phiWest = gPhi - 0.5 * gridLen;
+
+	fReal texPhi = (fReal)phiId / nPhi;
+	fReal texTheta = (fReal)thetaId / nTheta;
+	fReal texPhiEast = (phiEast - vPhiPhiOffset * gridLen) / pressurePhiNorm;
+	fReal texPhiWest = (phiWest - vPhiPhiOffset * gridLen) / pressurePhiNorm;
+
+	fReal previousVPhi = tex2D(texVelPhi, texPhi, texTheta);
+	fReal pressureEast = tex2D(texPressure, texPhiEast, texTheta);
+	fReal pressureWest = tex2D(texPressure, texPhiWest, texTheta);
+
+	fReal pressurePhi = pressureEast - pressureWest;
+	fReal deltaVPhi = -pressurePhi / (gridLen * sinf(gTheta));
+
+	output[thetaId * nPhi + phiId] = previousVPhi + deltaVPhi;
+}
 
 void KaminoSolver::projection()
 {
@@ -131,7 +198,6 @@ void KaminoSolver::projection()
 	crKernel<<<gridLayout, blockLayout, sharedMemSize>>>
 	(this->gpuA, this->gpuB, this->gpuC, this->gpuFImag, this->gpuUImag);
 	checkCudaErrors(cudaGetLastError());
-
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
@@ -141,7 +207,6 @@ void KaminoSolver::projection()
 	copy2UFourier<<<gridLayout, blockLayout>>>
 	(this->gpuUFourier, this->gpuUReal, this->gpuUImag, nTheta, nPhi);
 	checkCudaErrors(cudaGetLastError());
-
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
@@ -149,4 +214,16 @@ void KaminoSolver::projection()
 	checkCudaErrors((cudaError)cufftExecC2C(this->kaminoPlan,
 		gpuUFourier, gpuUFourier, CUFFT_FORWARD));
 	checkCudaErrors(cudaGetLastError());
+
+
+
+	shiftUKernel<<<gridLayout, blockLayout>>>
+	(gpuUFourier, pressure->getGPUThisStep(),
+		nTheta, nPhi, pressure->getThisStepPitch());
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	velPhi->bindTexture(texVelPhi);
+	velTheta->bindTexture(texVelTheta);
+	pressure->bindTexture(texPressure);
 }
