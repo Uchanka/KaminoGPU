@@ -226,4 +226,20 @@ void KaminoSolver::projection()
 	velPhi->bindTexture(texVelPhi);
 	velTheta->bindTexture(texVelTheta);
 	pressure->bindTexture(texPressure);
+
+	gridLayout = dim3(velTheta->getNTheta());
+	blockLayout = dim3(velTheta->getNPhi());
+	applyPressureTheta<<<gridLayout, blockLayout>>>
+	(velTheta->getGPUNextStep(),
+		velTheta->getNTheta(), velTheta->getNPhi(), gridLen);
+	checkCudaErrors(cudaGetLastError());
+
+	gridLayout = dim3(velPhi->getNTheta());
+	blockLayout = dim3(velPhi->getNPhi());
+	applyPressurePhi<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(),
+		velPhi->getNTheta(), velPhi->getNPhi(), gridLen);
+	checkCudaErrors(cudaGetLastError());
+
+	checkCudaErrors(cudaDeviceSynchronize());
 }
