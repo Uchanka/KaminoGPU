@@ -34,7 +34,7 @@ private:
 	fReal A;
 	int B, C, D, E;
 
-	Eigen::Matrix<fReal, 3, 1>* colorMap;
+	vec3* colorMap;
 
 	/* initialize density field in solver */
 	void initializeDensity(KaminoQuantity* d);

@@ -57,7 +57,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opencv_core2413d.lib;opencv_highgui2413d.lib;opencv_imgproc2413d.lib;partiod.lib;zlibstaticd.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cufft.lib;opencv_core2413d.lib;opencv_highgui2413d.lib;opencv_imgproc2413d.lib;partiod.lib;zlibstaticd.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -76,14 +76,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>opencv_core2413.lib;opencv_highgui2413.lib;opencv_imgproc2413.lib;partio.lib;zlibstatic.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cufft.lib;opencv_core2413.lib;opencv_highgui2413.lib;opencv_imgproc2413.lib;partio.lib;zlibstatic.lib;cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\aVector.h" />
+    <ClInclude Include="include\vectorUtil.h" />
+    <ClInclude Include="include\KaminoParticles.h" />
     <ClInclude Include="include\KaminoGPU.h" />
     <ClInclude Include="include\KaminoQuantity.h" />
     <ClInclude Include="include\KaminoSolver.h" />
@@ -92,17 +93,17 @@
   <ItemGroup>
     <CudaCompile Include="kernel\KaminoAdvection.cu" />
     <CudaCompile Include="kernel\KaminoGeometric.cu" />
+    <CudaCompile Include="kernel\KaminoGPU.cu" />
+    <CudaCompile Include="kernel\KaminoInitializer.cu" />
     <CudaCompile Include="kernel\KaminoProjection.cu" />
     <CudaCompile Include="kernel\KaminoQuantity.cu" />
     <CudaCompile Include="kernel\KaminoSolver.cu" />
+    <CudaCompile Include="kernel\main.cu" />
     <CudaCompile Include="kernel\tdm.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\aVector.cpp" />
+    <ClCompile Include="src\vectorUtil.cpp" />
     <ClCompile Include="src\CubicSolver.cpp" />
-    <ClCompile Include="src\Kamino.cpp" />
-    <ClCompile Include="src\KaminoInit.cpp" />
     <ClCompile Include="src\KaminoParticles.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

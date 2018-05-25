@@ -175,7 +175,7 @@ void KaminoSolver::projection()
 
 
 
-	checkCudaErrors((cudaError)cufftExecC2C(this->kaminoPlan,
+	checkCudaErrors((cudaError_t)cufftExecC2C(this->kaminoPlan,
 		gpuFFourier, gpuFFourier, CUFFT_INVERSE));
 	checkCudaErrors(cudaGetLastError());
 
@@ -211,7 +211,7 @@ void KaminoSolver::projection()
 
 
 
-	checkCudaErrors((cudaError)cufftExecC2C(this->kaminoPlan,
+	checkCudaErrors((cudaError_t)cufftExecC2C(this->kaminoPlan,
 		gpuUFourier, gpuUFourier, CUFFT_FORWARD));
 	checkCudaErrors(cudaGetLastError());
 

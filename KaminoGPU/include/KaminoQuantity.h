@@ -47,8 +47,8 @@ public:
 	/* Copy backwards */
 	void copyBackToCPU();
 	/* Bind the texture */
-	void bindTexture(table2D tex);
-	void unbindTexture(table2D tex);
+	void bindTexture(table2D& tex);
+	void unbindTexture(table2D& tex);
 
 	/* Get its name */
 	std::string getName();

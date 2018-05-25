@@ -13,7 +13,7 @@
 # include "device_launch_parameters.h"
 # include "helper_cuda.h"
 # include "cufft.h"
-# include "aVector.h"
+# include "vectorUtil.h"
 
 //# include <Eigen/Eigen>
 
@@ -40,7 +40,7 @@
 # define vThetaPhiOffset 0.0
 # define vThetaThetaOffset 1.0
 
-# define getIndex(phi, theta) (theta * nPhi + phi)
+# define getIndex(phi, theta) (theta * this->nPhi + phi)
 
 # define DEBUGBUILD
 

@@ -1,6 +1,6 @@
-# include "../include/KaminoQuantity.h"
+//# include "../include/KaminoParticles.h"
 
-KaminoParticles::KaminoParticles(fReal particleDensity, fReal radius, fReal h, KaminoSolver* solver, size_t nPhi, size_t nTheta, std::string densityImage, Eigen::Matrix<fReal, 3, 1>* colorMap) :
+/*KaminoParticles::KaminoParticles(fReal particleDensity, fReal radius, fReal h, KaminoSolver* solver, size_t nPhi, size_t nTheta, std::string densityImage, vec3* colorMap) :
                             particleDensity(particleDensity), radius(radius), parentSolver(solver)
 {
 
@@ -38,21 +38,21 @@ KaminoParticles::KaminoParticles(fReal particleDensity, fReal radius, fReal h, K
                 size_t x = std::floor(phi / h);
                 size_t y = std::floor(theta / h);
                 gridType* cellMap = solver->getGridTypeHandle();
-                gridType type = *(cellMap + solver->getIndex(x, y));
+                gridType type = *(cellMap + getIndex(x, y));
                 if(type == SOLIDGRID){
                     continue;
                 }
 
 				// set particle position
-                Eigen::Matrix<fReal, 2, 1> pos(phi, theta);
+                vec2 pos(phi, theta);
                 positions.push_back(pos);
 
                 // initialize velocities (0,0)
-                Eigen::Matrix<fReal, 2, 1> vel(0.0, 0.0);
+                vec2 vel(0.0, 0.0);
                 velocities.push_back(vel);
 
 				// define particle color
-				Eigen::Matrix<fReal, 3, 1> color = *(colorMap + solver->getIndex(x, y));
+				vec3 color = *(colorMap + getIndex(x, y));
 				colors.push_back(color);
             }
         }
@@ -99,21 +99,21 @@ KaminoParticles::KaminoParticles(fReal particleDensity, fReal radius, fReal h, K
                         size_t x = std::floor(phi / h);
                         size_t y = std::floor(theta / h);
                         gridType* cellMap = solver->getGridTypeHandle();
-                        gridType type = *(cellMap + solver->getIndex(x, y));
+                        gridType type = *(cellMap + getIndex(x, y));
                         if(type == SOLIDGRID){
                             continue;
                         }
 
 						// set particle position
-                        Eigen::Matrix<fReal, 2, 1> pos(phi, theta);
+                        vec2 pos(phi, theta);
                         positions.push_back(pos);
 
                         // initialize velocities (0,0)
-                        Eigen::Matrix<fReal, 2, 1> vel(0.0, 0.0);
+                        vec2 vel(0.0, 0.0);
                         velocities.push_back(vel);        
 
 						// define particle color
-						Eigen::Matrix<fReal, 3, 1> color = *(colorMap + solver->getIndex(x, y));
+						vec3 color = *(colorMap + getIndex(x, y));
 						colors.push_back(color);
                     }
                 }
@@ -180,13 +180,13 @@ void KaminoParticles::write_data_bgeo(const std::string& s, const int frame)
         float* p = parts->dataWrite<float>(posH, idx);
         float* v = parts->dataWrite<float>(vH, idx);
 		float* c = parts->dataWrite<float>(col, idx);
-        Eigen::Matrix<float, 3, 1> pos(positions[i][0], positions[i][1], 0.0);
-        Eigen::Matrix<float, 3, 1> vel(velocities[i][0], positions[i][1], 0.0);
+        vec3 pos(positions[i][0], positions[i][1], 0.0);
+        vec3 vel(velocities[i][0], positions[i][1], 0.0);
         mapVToSphere(pos, vel);
         mapPToSphere(pos);
         for (int k = 0; k < 3; ++k){
-            p[k] = pos(k, 0);
-            v[k] = vel(k, 0);
+            p[k] = pos[k];
+            v[k] = vel[k];
 			c[k] = colors[i][k];
         }
     }
@@ -194,7 +194,7 @@ void KaminoParticles::write_data_bgeo(const std::string& s, const int frame)
     parts->release();
 }
 
-void KaminoParticles::mapPToSphere(Eigen::Matrix<float, 3, 1>& pos) const
+void KaminoParticles::mapPToSphere(vec3& pos) const
 {
     float theta = pos[1];
     float phi = pos[0];
@@ -203,7 +203,7 @@ void KaminoParticles::mapPToSphere(Eigen::Matrix<float, 3, 1>& pos) const
     pos[1] = radius * cos(theta);
 }
 
-void KaminoParticles::mapVToSphere(Eigen::Matrix<float, 3, 1>& pos, Eigen::Matrix<float, 3, 1>& vel) const
+void KaminoParticles::mapVToSphere(vec3& pos, vec3& vel) const
 {
     float theta = pos[1];
     float phi = pos[0];
@@ -214,4 +214,4 @@ void KaminoParticles::mapVToSphere(Eigen::Matrix<float, 3, 1>& pos, Eigen::Matri
     vel[0] = cos(theta) * cos(phi) * u_theta - sin(phi) * u_phi;
     vel[2] = cos(theta) * sin(phi) * u_theta + cos(phi) * u_phi;
     vel[1] = -sin(theta) * u_theta;
-}
+}*/

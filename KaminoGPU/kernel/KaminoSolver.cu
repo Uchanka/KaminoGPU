@@ -43,15 +43,15 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	this->pressure = new KaminoQuantity("p", nPhi, nTheta,
 		centeredPhiOffset, centeredThetaOffset);
 
-	this->cpuGridTypesBuffer = new gridType[nPhi * nTheta];
+	/*this->cpuGridTypesBuffer = new gridType[nPhi * nTheta];
 	checkCudaErrors(cudaMalloc((void **)(this->gpuGridTypes),
-		sizeof(gridType) * nPhi * nTheta));
+		sizeof(gridType) * nPhi * nTheta));*/
 
 	initialize_velocity();
 	copyVelocity2GPU();
 
 	initialize_boundary();
-	copyGridType2GPU();
+	//copyGridType2GPU();
 
 	setTextureParams(texVelPhi);
 	setTextureParams(texVelTheta);
@@ -60,7 +60,7 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 
 	int sigLenArr[1];
 	sigLenArr[0] = nPhi;
-	checkCudaErrors(cufftPlanMany(&kaminoPlan, fftRank, sigLenArr,
+	checkCudaErrors((cudaError_t)cufftPlanMany(&kaminoPlan, fftRank, sigLenArr,
 		NULL, 1, nPhi,
 		NULL, 1, nPhi,
 		CUFFT_C2C, nTheta));
@@ -100,16 +100,6 @@ void KaminoSolver::copyVelocity2GPU()
 {
 	velPhi->copyToGPU();
 	velTheta->copyToGPU();
-}
-
-void KaminoSolver::bindPressure2Tex(table2D tex)
-{
-	this->pressure->bindTexture(tex);
-}
-void KaminoSolver::bindVelocity2Tex(table2D phi, table2D theta)
-{
-	this->velPhi->bindTexture(phi);
-	this->velTheta->bindTexture(theta);
 }
 
 __global__ void precomputeABCKernel
@@ -153,14 +143,17 @@ void KaminoSolver::stepForward(fReal timeStep)
 {
 	this->timeStep = timeStep;
 	advection();
-	//std::cout << "Advection completed" << std::endl;
+	std::cout << "Advection completed" << std::endl;
 	geometric();
-	//std::cout << "Geometric completed" << std::endl;
+	std::cout << "Geometric completed" << std::endl;
 	bodyForce();
-	//std::cout << "Body force application completed" << std::endl;
+	std::cout << "Body force application completed" << std::endl;
 	projection();
-	//std::cout << "Projection completed" << std::endl;
+	std::cout << "Projection completed" << std::endl;
 	this->timeElapsed += timeStep;
+
+	velPhi->copyBackToCPU();
+	velTheta->copyBackToCPU();
 }
 
 // Phi: 0 - 2pi  Theta: 0 - pi
@@ -220,10 +213,10 @@ gridType KaminoSolver::getGridTypeAt(size_t x, size_t y)
 	return this->cpuGridTypesBuffer[getIndex(x, y)];
 }
 
-KaminoQuantity* KaminoSolver::getAttributeNamed(std::string name)
+/*KaminoQuantity* KaminoSolver::getAttributeNamed(std::string name)
 {
 	return (*this)[name];
-}
+}*/
 
 void KaminoSolver::swapAttrBuffers()
 {
