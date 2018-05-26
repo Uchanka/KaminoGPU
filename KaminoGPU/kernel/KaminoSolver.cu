@@ -203,16 +203,6 @@ void KaminoSolver::TDMSolve(fReal* a, fReal* b, fReal* c, fReal* d)
 	}
 }
 
-gridType KaminoSolver::getGridTypeAt(size_t x, size_t y)
-{
-	return this->cpuGridTypesBuffer[getIndex(x, y)];
-}
-
-/*KaminoQuantity* KaminoSolver::getAttributeNamed(std::string name)
-{
-	return (*this)[name];
-}*/
-
 void KaminoSolver::swapAttrBuffers()
 {
 	this->velPhi->swapGPUBuffer();
@@ -277,8 +267,8 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 			pos = vec3((i + centeredPhiOffset) * gridLen, (j + centeredThetaOffset) * gridLen, 0.0);
 			vel = vec3(0.0, velocityTheta, velocityPhi);
-			mapVToSphere(pos, vel);
-			mapPToSphere(pos);
+			//mapVToSphere(pos, vel);
+			//mapPToSphere(pos);
 
 			int idx = parts->addParticle();
 			float* p = parts->dataWrite<float>(pH, idx);

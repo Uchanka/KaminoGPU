@@ -30,11 +30,6 @@ private:
 	fReal* gpuC;
 	void precomputeABCCoef();
 
-	/* Grid types */
-	gridType* cpuGridTypesBuffer;
-	gridType* gpuGridTypes;
-	void copyGridType2GPU();
-
 	/* Grid dimensions */
 	size_t nPhi;
 	size_t nTheta;
@@ -63,9 +58,6 @@ private:
 	fReal frameDuration;
 	fReal timeStep;
 	fReal timeElapsed;
-
-	// Is it solid? or fluid? or even air?
-	gridType getGridTypeAt(size_t x, size_t y);
 
 	/// Kernel calling from here
 	void advection();
@@ -107,3 +99,10 @@ public:
 
 	void write_data_bgeo(const std::string& s, const int frame);
 };
+
+__device__ fReal kaminoLerp(fReal from, fReal to, fReal alpha);
+
+__device__ fReal sampleAt
+(fReal* attribute, fReal phi, fReal theta,
+	fReal phiOffset, fReal thetaOffset, fReal gridLen,
+	size_t nTheta, size_t nPhi, size_t nPitch);
