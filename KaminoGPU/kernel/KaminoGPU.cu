@@ -44,12 +44,14 @@ void Kamino::run()
 	KaminoQuantity* u = solver.getAttributeNamed("u");
 	KaminoQuantity* v = solver.getAttributeNamed("v");*/
 
-	//solver.write_data_bgeo(gridPath, 0);
+	solver.write_data_bgeo(gridPath, 0);
 	//particles.write_data_bgeo(particlePath, 0);
 
 	float T = 0.0;              // simulation time
-	for (int i = 1; i <= frames; i++) {
-		while (T < i*DT) {
+	for (int i = 1; i <= frames; i++) 
+	{
+		while (T < i*DT) 
+		{
 			solver.stepForward(dt);
 			//particles.updatePositions(u, v, dt);
 			T += dt;
@@ -58,7 +60,7 @@ void Kamino::run()
 		//particles.updatePositions(u, v, dt);
 		T = i*DT;
 
-		//solver.write_data_bgeo(gridPath, i);
+		solver.write_data_bgeo(gridPath, i);
 		//particles.write_data_bgeo(particlePath, i);
 	}
 }

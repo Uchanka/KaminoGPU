@@ -63,8 +63,6 @@ private:
 	KaminoQuantity* pressure;
 	void copyVelocity2GPU();
 	void copyVelocityBack2CPU();
-	void bindVelocity2Tex(table2D phi, table2D theta);
-	void bindPressure2Tex(table2D pressure);
 
 	/* Something about time steps */
 	fReal frameDuration;
@@ -111,7 +109,7 @@ private:
 	void mapPToSphere(vec3& pos) const;
 	void mapVToSphere(vec3& pos, vec3& vel) const;
 	/* Convert to texture */
-	static void setTextureParams(table2D tex);
+	static void setTextureParams(table2D& tex);
 public:
 	
 	KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,

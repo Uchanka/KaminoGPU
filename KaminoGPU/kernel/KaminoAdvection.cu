@@ -46,7 +46,7 @@ __global__ void advectionVPhiKernel
 	fReal pPhiTex = (pPhi - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
 	fReal pThetaTex = (pTheta - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
 
-	fReal advectedVal = tex2D(texBeingAdvected, pPhiTex, pThetaTex);
+	fReal advectedVal = tex2D(texVelPhi, pPhiTex, pThetaTex);
 
 	attributeOutput[thetaId * nPitch + phiId] = advectedVal;
 };
@@ -97,7 +97,7 @@ __global__ void advectionVThetaKernel
 	fReal pPhiTex = (pPhi - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
 	fReal pThetaTex = (pTheta - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
 
-	fReal advectedVal = tex2D(texBeingAdvected, pPhiTex, pThetaTex);
+	fReal advectedVal = tex2D(texVelTheta, pPhiTex, pThetaTex);
 
 	attributeOutput[thetaId * nPitch + phiId] = advectedVal;
 };
@@ -110,26 +110,28 @@ void KaminoSolver::advection()
 	
 	///kernel call goes here
 	// Advect Phi
-	velPhi->bindTexture(texBeingAdvected);
+	//velPhi->bindTexture(texBeingAdvected);
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
 	advectionVPhiKernel<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch(),
 	gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	//velPhi->unbindTexture(texBeingAdvected);
 
 	// Advect Theta
 	
 	//texBeingAdvected = texVelTheta;
-	velTheta->bindTexture(texBeingAdvected);
+	//velTheta->bindTexture(texBeingAdvected);
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	advectionVThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
 	gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
-
 	checkCudaErrors(cudaDeviceSynchronize());
+	//velTheta->unbindTexture(texBeingAdvected);
 
 	velPhi->unbindTexture(texVelPhi);
 	velTheta->unbindTexture(texVelTheta);

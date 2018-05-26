@@ -84,11 +84,11 @@ KaminoSolver::~KaminoSolver()
 	delete this->velTheta;
 	delete this->pressure;
 
-	delete[] cpuGridTypesBuffer;
-	checkCudaErrors(cudaFree(gpuGridTypes));
+	//delete[] cpuGridTypesBuffer;
+	//checkCudaErrors(cudaFree(gpuGridTypes));
 }
 
-void KaminoSolver::setTextureParams(table2D tex)
+void KaminoSolver::setTextureParams(table2D& tex)
 {
 	tex.addressMode[0] = cudaAddressModeWrap;
 	tex.addressMode[1] = cudaAddressModeMirror;
@@ -144,12 +144,12 @@ void KaminoSolver::stepForward(fReal timeStep)
 	this->timeStep = timeStep;
 	advection();
 	std::cout << "Advection completed" << std::endl;
-	geometric();
-	std::cout << "Geometric completed" << std::endl;
-	bodyForce();
-	std::cout << "Body force application completed" << std::endl;
-	projection();
-	std::cout << "Projection completed" << std::endl;
+	//geometric();
+	//std::cout << "Geometric completed" << std::endl;
+	//bodyForce();
+	//std::cout << "Body force application completed" << std::endl;
+	//projection();
+	//std::cout << "Projection completed" << std::endl;
 	this->timeElapsed += timeStep;
 
 	velPhi->copyBackToCPU();
@@ -244,34 +244,44 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	Partio::ParticleAttribute pH, vH;// , psH, dens;
 	pH = parts->addAttribute("position", Partio::VECTOR, 3);
 	vH = parts->addAttribute("v", Partio::VECTOR, 3);
-	//psH = parts->addAttribute("pressure", Partio::VECTOR, 1);
-	//dens = parts->addAttribute("density", Partio::VECTOR, 1);
 
 	vec3 pos;
 	vec3 vel;
-	fReal pressure, densityValue;
-	fReal velX, velY;
 
-	KaminoQuantity* u = velPhi;
-	KaminoQuantity* v = velTheta;
-	fReal uRight, uLeft, vUp, vDown;
+	size_t iWest, iEast, jNorth, jSouth;
+	fReal uWest, uEast, vNorth, vSouth;
 
-	size_t upi, vpi;
+	for (size_t j = 0; j < nTheta; ++j)
+	{
+		for (size_t i = 0; i < nPhi; ++i)
+		{
+			iWest = i;
+			uWest = velPhi->getCPUValueAt(iWest, j);
+			i == (nPhi - 1) ? iEast = 0 : iEast = i + 1;
+			uEast = velPhi->getCPUValueAt(iEast, j);
 
-	for (size_t j = 0; j < nTheta; ++j) {
-		for (size_t i = 0; i < nPhi; ++i) {
-			uLeft = u->getCPUValueAt(i, j);
-			i == (nPhi - 1) ? upi = 0 : upi = i + 1;
-			vDown = v->getCPUValueAt(i, j);
-			j == (nTheta - 1) ? vpi = 0 : vpi = j + 1;
-			uRight = u->getCPUValueAt(upi, j);
-			vUp = u->getCPUValueAt(i, vpi);
+			if (j == 0)
+			{
+				jNorth = jSouth = 0;
+			}
+			else if (j == nTheta - 1)
+			{
+				jNorth = jSouth = nTheta - 2;
+			}
+			else
+			{
+				jNorth = j - 1;
+				jSouth = j;
+			}
+			vNorth = velTheta->getCPUValueAt(i, jNorth);
+			vSouth = velTheta->getCPUValueAt(i, jSouth);
 
-			velX = (uLeft + uRight) / 2.0;
-			velY = (vUp + vDown) / 2.0;
+			fReal velocityPhi, velocityTheta;
+			velocityPhi = (uWest + uEast) / 2.0;
+			velocityTheta = (vNorth + vSouth) / 2.0;
 
-			pos = vec3(i * gridLen, j * gridLen, 0.0);
-			vel = vec3(0.0, velY, velX);
+			pos = vec3((i + centeredPhiOffset) * gridLen, (j + centeredThetaOffset) * gridLen, 0.0);
+			vel = vec3(0.0, velocityTheta, velocityPhi);
 			mapVToSphere(pos, vel);
 			mapPToSphere(pos);
 
@@ -279,7 +289,8 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 			float* p = parts->dataWrite<float>(pH, idx);
 			float* v = parts->dataWrite<float>(vH, idx);
 			
-			for (int k = 0; k < 3; ++k) {
+			for (int k = 0; k < 3; ++k) 
+			{
 				p[k] = pos[k];
 				v[k] = vel[k];
 			}

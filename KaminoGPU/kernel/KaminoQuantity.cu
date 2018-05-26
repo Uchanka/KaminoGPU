@@ -27,7 +27,7 @@ void KaminoQuantity::copyToGPU()
 
 void KaminoQuantity::copyBackToCPU()
 {
-	checkCudaErrors(cudaMemcpy2D((void*)this->cpuBuffer, nPhi * sizeof(fReal), (void*)this->gpuThisStep,
+	checkCudaErrors(cudaMemcpy2D(this->cpuBuffer, nPhi * sizeof(fReal), (void*)this->gpuThisStep,
 	this->thisStepPitch, nPhi * sizeof(fReal), nTheta, cudaMemcpyDeviceToHost));
 }
 

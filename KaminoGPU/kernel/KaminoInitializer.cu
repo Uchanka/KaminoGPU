@@ -23,7 +23,7 @@ void KaminoSolver::initialize_velocity()
 	sizeTheta = v->getNTheta();
 
 	// rest of sphere
-	for (size_t j = 1; j < sizeTheta - 1; ++j) {
+	for (size_t j = 0; j < sizeTheta; ++j) {
 		for (size_t i = 0; i < sizePhi; ++i) {
 			l = lPhi(i * gridLen);
 			m = mTheta(j * gridLen);
