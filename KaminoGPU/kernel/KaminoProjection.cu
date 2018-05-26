@@ -1,5 +1,9 @@
 # include "../include/KaminoSolver.h"
 
+static table2D texProjVelPhi;
+static table2D texProjVelTheta;
+static table2D texProjPressure;
+
 __global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *d_x);
 
 __global__ void fillDivergenceKernel
@@ -31,18 +35,18 @@ __global__ void fillDivergenceKernel
 	fReal phiEastTex = (phiEast - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
 	fReal phiWestTex = (phiWest - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
 
-	uEast = tex2D(texVelPhi, phiEastTex, thetaTex);
-	uWest = tex2D(texVelPhi, phiWestTex, thetaTex);
+	uEast = tex2D<fReal>(texProjVelPhi, phiEastTex, thetaTex);
+	uWest = tex2D<fReal>(texProjVelPhi, phiWestTex, thetaTex);
 
 	if (gridThetaId != 0)
 	{
 		fReal thetaNorthTex = (thetaNorth - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
-		vNorth = tex2D(texVelTheta, phiTex, thetaNorthTex);
+		vNorth = tex2D<fReal>(texProjVelTheta, phiTex, thetaNorthTex);
 	}
 	if (gridThetaId != nTheta - 1)
 	{
 		fReal thetaSouthTex = (thetaSouth - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
-		vSouth = tex2D(texVelTheta, phiTex, thetaSouthTex);
+		vSouth = tex2D<fReal>(texProjVelTheta, phiTex, thetaSouthTex);
 	}
 
 	fReal invGridSine = 1.0 / sinf(gridThetaCoord);
@@ -122,9 +126,9 @@ __global__ void applyPressureTheta
 	fReal texThetaNorth = (thetaNorth - vThetaThetaOffset * gridLen) / pressureThetaNorm;
 	fReal texThetaSouth = (thetaSouth - vThetaThetaOffset * gridLen) / pressureThetaNorm;
 
-	fReal previousVTheta = tex2D(texVelTheta, texPhi, texTheta);
-	fReal pressureNorth = tex2D(texPressure, texPhi, texThetaNorth);
-	fReal pressureSouth = tex2D(texPressure, texPhi, texThetaSouth);
+	fReal previousVTheta = tex2D<fReal>(texProjVelTheta, texPhi, texTheta);
+	fReal pressureNorth = tex2D<fReal>(texProjPressure, texPhi, texThetaNorth);
+	fReal pressureSouth = tex2D<fReal>(texProjPressure, texPhi, texThetaSouth);
 
 	fReal pressureTheta = pressureSouth - pressureNorth;
 	fReal deltaVTheta = -pressureTheta / gridLen;
@@ -149,9 +153,9 @@ __global__ void applyPressurePhi
 	fReal texPhiEast = (phiEast - vPhiPhiOffset * gridLen) / pressurePhiNorm;
 	fReal texPhiWest = (phiWest - vPhiPhiOffset * gridLen) / pressurePhiNorm;
 
-	fReal previousVPhi = tex2D(texVelPhi, texPhi, texTheta);
-	fReal pressureEast = tex2D(texPressure, texPhiEast, texTheta);
-	fReal pressureWest = tex2D(texPressure, texPhiWest, texTheta);
+	fReal previousVPhi = tex2D<fReal>(texProjVelPhi, texPhi, texTheta);
+	fReal pressureEast = tex2D<fReal>(texProjPressure, texPhiEast, texTheta);
+	fReal pressureWest = tex2D<fReal>(texProjPressure, texPhiWest, texTheta);
 
 	fReal pressurePhi = pressureEast - pressureWest;
 	fReal deltaVPhi = -pressurePhi / (gridLen * sinf(gTheta));
@@ -161,8 +165,12 @@ __global__ void applyPressurePhi
 
 void KaminoSolver::projection()
 {
-	velPhi->bindTexture(texVelPhi);
-	velTheta->bindTexture(texVelTheta);
+	setTextureParams(&texProjVelPhi);
+	setTextureParams(&texProjVelTheta);
+	setTextureParams(&texProjPressure);
+	velPhi->bindTexture(&texProjVelPhi);
+	velTheta->bindTexture(&texProjVelTheta);
+	pressure->bindTexture(&texProjPressure);
 
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
@@ -222,10 +230,6 @@ void KaminoSolver::projection()
 		nTheta, nPhi, pressure->getThisStepPitch());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
-
-	velPhi->bindTexture(texVelPhi);
-	velTheta->bindTexture(texVelTheta);
-	pressure->bindTexture(texPressure);
 
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());

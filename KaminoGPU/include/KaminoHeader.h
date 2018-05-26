@@ -48,7 +48,7 @@
 typedef float fReal;
 typedef cufftComplex ComplexFourier;
 
-typedef texture<float, 2, cudaReadModeElementType> table2D;
+typedef texture<fReal, 2, cudaReadModeElementType> table2D;
 
 const size_t byte2Bits = 8;
 

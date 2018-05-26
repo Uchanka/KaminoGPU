@@ -53,11 +53,6 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	initialize_boundary();
 	//copyGridType2GPU();
 
-	setTextureParams(texVelPhi);
-	setTextureParams(texVelTheta);
-	setTextureParams(texBeingAdvected);
-	setTextureParams(texPressure);
-
 	int sigLenArr[1];
 	sigLenArr[0] = nPhi;
 	checkCudaErrors((cudaError_t)cufftPlanMany(&kaminoPlan, fftRank, sigLenArr,
@@ -88,12 +83,12 @@ KaminoSolver::~KaminoSolver()
 	//checkCudaErrors(cudaFree(gpuGridTypes));
 }
 
-void KaminoSolver::setTextureParams(table2D& tex)
+void KaminoSolver::setTextureParams(table2D* tex)
 {
-	tex.addressMode[0] = cudaAddressModeWrap;
-	tex.addressMode[1] = cudaAddressModeMirror;
-	tex.filterMode = cudaFilterModeLinear;
-	tex.normalized = true;
+	tex->addressMode[0] = cudaAddressModeWrap;
+	tex->addressMode[1] = cudaAddressModeMirror;
+	tex->filterMode = cudaFilterModeLinear;
+	tex->normalized = true;
 }
 
 void KaminoSolver::copyVelocity2GPU()
@@ -321,9 +316,4 @@ void KaminoSolver::mapVToSphere(vec3& pos, vec3& vel) const
 	vel[0] = cos(theta) * cos(phi) * u_theta - sin(phi) * u_phi;
 	vel[2] = cos(theta) * sin(phi) * u_theta + cos(phi) * u_phi;
 	vel[1] = -sin(theta) * u_theta;
-}
-
-gridType* KaminoSolver::getGridTypeHandle()
-{
-	return this->cpuGridTypesBuffer;
 }

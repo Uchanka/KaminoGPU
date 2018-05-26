@@ -1,5 +1,8 @@
 # include "../include/KaminoSolver.h"
 
+static table2D texGeoVelPhi;
+static table2D texGeoVelTheta;
+
 __global__ void geometricPhiKernel
 (fReal* attributeOutput,
 	size_t nTheta, size_t nPhi, size_t nPitch,
@@ -18,8 +21,8 @@ __global__ void geometricPhiKernel
 	fReal gThetaTex = (fReal)thetaId / nTheta;
 
 	// Sample the speed
-	fReal guPhi = tex2D(texVelPhi, gPhiTex, gThetaTex);
-	fReal guTheta = tex2D(texVelTheta, gPhiTex, gThetaTex);
+	fReal guPhi = tex2D(texGeoVelPhi, gPhiTex, gThetaTex);
+	fReal guTheta = tex2D(texGeoVelTheta, gPhiTex, gThetaTex);
 
 	fReal updateduPhi = guPhi - factor * guPhi * gTheta;
 
@@ -44,8 +47,8 @@ __global__ void geometricThetaKernel
 	fReal gThetaTex = (fReal)thetaId / nTheta;
 
 	// Sample the speed
-	fReal guPhi = tex2D(texVelPhi, gPhiTex, gThetaTex);
-	fReal guTheta = tex2D(texVelTheta, gPhiTex, gThetaTex);
+	fReal guPhi = tex2D(texGeoVelPhi, gPhiTex, gThetaTex);
+	fReal guTheta = tex2D(texGeoVelTheta, gPhiTex, gThetaTex);
 
 	fReal updateduTheta = guTheta + factor * guPhi * guPhi;
 
@@ -54,8 +57,10 @@ __global__ void geometricThetaKernel
 
 void KaminoSolver::geometric()
 {
-	velPhi->bindTexture(texVelPhi);
-	velTheta->bindTexture(texVelTheta);
+	setTextureParams(&texGeoVelPhi);
+	setTextureParams(&texGeoVelTheta);
+	velPhi->bindTexture(&texGeoVelPhi);
+	velTheta->bindTexture(&texGeoVelTheta);
 
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
@@ -71,8 +76,8 @@ void KaminoSolver::geometric()
 		gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
 
-	velPhi->unbindTexture(texVelPhi);
-	velTheta->unbindTexture(texVelTheta);
+	velPhi->unbindTexture(&texGeoVelPhi);
+	velTheta->unbindTexture(&texGeoVelTheta);
 
 	checkCudaErrors(cudaDeviceSynchronize());
 	swapAttrBuffers();
