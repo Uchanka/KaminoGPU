@@ -277,8 +277,8 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 			pos = vec3((i + centeredPhiOffset) * gridLen, (j + centeredThetaOffset) * gridLen, 0.0);
 			vel = vec3(0.0, velocityTheta, velocityPhi);
-			mapVToSphere(pos, vel);
-			mapPToSphere(pos);
+			//mapVToSphere(pos, vel);
+			//mapPToSphere(pos);
 
 			int idx = parts->addParticle();
 			float* p = parts->dataWrite<float>(pH, idx);

@@ -5,7 +5,7 @@ static table2D texAdvVelTheta;
 
 __global__ void advectionVPhiKernel
 	(fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitch,
+	size_t nTheta, size_t nPhi, size_t nPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
@@ -51,12 +51,12 @@ __global__ void advectionVPhiKernel
 
 	fReal advectedVal = tex2D<fReal>(texAdvVelPhi, pPhiTex, pThetaTex);
 
-	attributeOutput[thetaId * nPitch + phiId] = advectedVal;
+	attributeOutput[thetaId * nPitchInElements + phiId] = advectedVal;
 };
 
 __global__ void advectionVThetaKernel
 (fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitch,
+	size_t nTheta, size_t nPhi, size_t nPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
@@ -102,7 +102,7 @@ __global__ void advectionVThetaKernel
 
 	fReal advectedVal = tex2D(texAdvVelTheta, pPhiTex, pThetaTex);
 
-	attributeOutput[thetaId * nPitch + phiId] = advectedVal;
+	attributeOutput[thetaId * nPitchInElements + phiId] = advectedVal;
 };
 
 void KaminoSolver::advection()
@@ -120,7 +120,7 @@ void KaminoSolver::advection()
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
 	advectionVPhiKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch(),
+	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch() / sizeof(fReal),
 	gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
@@ -130,7 +130,7 @@ void KaminoSolver::advection()
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	advectionVThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
+	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch() / sizeof(fReal),
 	gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
