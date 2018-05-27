@@ -5,7 +5,7 @@ static table2D texGeoVelTheta;
 
 __global__ void geometricPhiKernel
 (fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitch,
+	size_t nPhi, size_t nTheta, size_t nPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
@@ -26,12 +26,12 @@ __global__ void geometricPhiKernel
 
 	fReal updateduPhi = guPhi - factor * guPhi * gTheta;
 
-	attributeOutput[thetaId * nPitch + phiId] = updateduPhi;
+	attributeOutput[thetaId * nPitchInElements + phiId] = updateduPhi;
 };
 
 __global__ void geometricThetaKernel
 (fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitch,
+	size_t nPhi, size_t nTheta, size_t nPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	// Index
@@ -52,7 +52,7 @@ __global__ void geometricThetaKernel
 
 	fReal updateduTheta = guTheta + factor * guPhi * guPhi;
 
-	attributeOutput[thetaId * nPitch + phiId] = updateduTheta;
+	attributeOutput[thetaId * nPitchInElements + phiId] = updateduTheta;
 };
 
 void KaminoSolver::geometric()
@@ -65,14 +65,14 @@ void KaminoSolver::geometric()
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
 	geometricPhiKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velPhi->getNTheta(),
-		velPhi->getNPhi(), velPhi->getNextStepPitch(),
+	(velPhi->getGPUNextStep(), velPhi->getNPhi(),
+		velPhi->getNTheta(), velPhi->getNextStepPitch() / sizeof(fReal),
 		gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
 
 	geometricThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(),
-		velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch(),
+		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
 		gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
 

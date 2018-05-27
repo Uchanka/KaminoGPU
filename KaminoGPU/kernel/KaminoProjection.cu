@@ -8,7 +8,7 @@ __global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *
 
 __global__ void fillDivergenceKernel
 (ComplexFourier* outputF,
-	size_t nTheta, size_t nPhi,
+	size_t nPhi, size_t nTheta,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	int gridPhiId = threadIdx.x;
@@ -66,7 +66,7 @@ __global__ void fillDivergenceKernel
 
 __global__ void shiftFKernel
 (ComplexFourier* FFourierInput, fReal* FFourierShiftedReal, fReal* FFourierShiftedImag,
-	size_t nTheta, size_t nPhi)
+	size_t nPhi, size_t nTheta)
 {
 	int nIdx = threadIdx.x;
 	int thetaIdx = blockIdx.x;
@@ -80,7 +80,7 @@ __global__ void shiftFKernel
 
 __global__ void copy2UFourier
 (ComplexFourier* UFourierOutput, fReal* UFourierReal, fReal* UFourierImag,
-	size_t nTheta, size_t nPhi)
+	size_t nPhi, size_t nTheta)
 {
 	int nIdx = threadIdx.x;
 	int thetaIdx = blockIdx.x;
@@ -90,7 +90,7 @@ __global__ void copy2UFourier
 
 __global__ void shiftUKernel
 (ComplexFourier* UFourierInput, fReal* pressure,
-	size_t nTheta, size_t nPhi, size_t nPressurePitch)
+	size_t nPhi, size_t nTheta, size_t nPressurePitchInElements)
 {
 	int phiIdx = threadIdx.x;
 	int thetaIdx = blockIdx.x;
@@ -105,12 +105,12 @@ __global__ void shiftUKernel
 	else
 		bit = -1;
 	pressureVal = bit * UFourierInput[thetaIdx * nPhi + phiIdx].x - zeroComponent;
-	pressure[thetaIdx * nPressurePitch + phiIdx] = pressureVal;
+	pressure[thetaIdx * nPressurePitchInElements + phiIdx] = pressureVal;
 }
 
 __global__ void applyPressureTheta
 (fReal* output,
-	size_t nTheta, size_t nPhi,
+	size_t nPhi, size_t nTheta, size_t nPitchInElements,
 	fReal gridLen)
 {
 	int thetaId = threadIdx.x;
@@ -137,7 +137,7 @@ __global__ void applyPressureTheta
 }
 __global__ void applyPressurePhi
 (fReal* output,
-	size_t nTheta, size_t nPhi,
+	size_t nTheta, size_t nPhi, size_t nPitchInElements,
 	fReal gridLen)
 {
 	int thetaId = threadIdx.x;
@@ -176,7 +176,7 @@ void KaminoSolver::projection()
 	dim3 blockLayout(nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
 	(gpuFFourier, 
-		nTheta, nPhi,
+		nPhi, nTheta,
 		gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
@@ -190,7 +190,9 @@ void KaminoSolver::projection()
 
 
 	shiftFKernel<<<gridLayout, blockLayout>>>
-	(gpuFFourier, gpuFReal, gpuFImag, nTheta, nPhi);
+	(gpuFFourier,
+		gpuFReal, gpuFImag,
+		nPhi, nTheta);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	// Now gpuFDivergence stores all the Fn
@@ -213,7 +215,9 @@ void KaminoSolver::projection()
 	gridLayout = dim3(nTheta);
 	blockLayout = dim3(nPhi);
 	copy2UFourier<<<gridLayout, blockLayout>>>
-	(this->gpuUFourier, this->gpuUReal, this->gpuUImag, nTheta, nPhi);
+	(this->gpuUFourier,
+		this->gpuUReal, this->gpuUImag,
+		nPhi, nTheta);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -227,7 +231,7 @@ void KaminoSolver::projection()
 
 	shiftUKernel<<<gridLayout, blockLayout>>>
 	(gpuUFourier, pressure->getGPUThisStep(),
-		nTheta, nPhi, pressure->getThisStepPitch());
+		nPhi, nTheta, pressure->getThisStepPitch() / sizeof(fReal));
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -235,14 +239,16 @@ void KaminoSolver::projection()
 	blockLayout = dim3(velTheta->getNPhi());
 	applyPressureTheta<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(),
-		velTheta->getNTheta(), velTheta->getNPhi(), gridLen);
+		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
+		gridLen);
 	checkCudaErrors(cudaGetLastError());
 
 	gridLayout = dim3(velPhi->getNTheta());
 	blockLayout = dim3(velPhi->getNPhi());
 	applyPressurePhi<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(),
-		velPhi->getNTheta(), velPhi->getNPhi(), gridLen);
+		velPhi->getNPhi(), velPhi->getNTheta(), velPhi->getNextStepPitch() / sizeof(fReal),
+		gridLen);
 	checkCudaErrors(cudaGetLastError());
 
 	checkCudaErrors(cudaDeviceSynchronize());
