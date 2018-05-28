@@ -74,8 +74,10 @@ __global__ void shiftFKernel
 	if (fftIndex < 0)
 		fftIndex += nPhi;
 	//FFourierShifted[thetaIdx * nPhi + phiIdx] = FFourierInput[thetaIdx * nPhi + fftIndex];
-	FFourierShiftedReal[nIdx * nTheta + thetaIdx] = FFourierInput[thetaIdx * nPhi + fftIndex].x;
-	FFourierShiftedImag[nIdx * nTheta + thetaIdx] = FFourierInput[thetaIdx * nPhi + fftIndex].y;
+	fReal real = FFourierInput[thetaIdx * nPhi + fftIndex].x / (fReal)nPhi;
+	fReal imag = FFourierInput[thetaIdx * nPhi + fftIndex].y / (fReal)nPhi;
+	FFourierShiftedReal[nIdx * nTheta + thetaIdx] = real;
+	FFourierShiftedImag[nIdx * nTheta + thetaIdx] = imag;
 }
 
 __global__ void copy2UFourier
@@ -84,8 +86,10 @@ __global__ void copy2UFourier
 {
 	int nIdx = threadIdx.x;
 	int thetaIdx = blockIdx.x;
-	UFourierOutput[thetaIdx * nPhi + nIdx].x = UFourierReal[nIdx * nTheta + thetaIdx];
-	UFourierOutput[thetaIdx * nPhi + nIdx].y = UFourierImag[nIdx * nTheta + thetaIdx];
+	ComplexFourier u;
+	u.x = UFourierReal[nIdx * nTheta + thetaIdx];
+	u.y = UFourierImag[nIdx * nTheta + thetaIdx];
+	UFourierOutput[thetaIdx * nPhi + nIdx] = u;
 }
 
 __global__ void shiftUKernel
@@ -98,13 +102,13 @@ __global__ void shiftUKernel
 	fReal zeroComponent = UFourierInput[thetaIdx * nPhi + nPhi / 2].x;
 	if (phiIdx != 0)
 		fftIndex = nPhi - phiIdx;
-	fReal pressureVal = 0.0;
-	int bit = 0;
+	fReal pressureVal;
+
 	if (phiIdx % 2 == 0)
-		bit = 1;
+		pressureVal = UFourierInput[thetaIdx * nPhi + fftIndex].x - zeroComponent;
 	else
-		bit = -1;
-	pressureVal = bit * UFourierInput[thetaIdx * nPhi + phiIdx].x - zeroComponent;
+		pressureVal = -UFourierInput[thetaIdx * nPhi + fftIndex].x - zeroComponent;
+	
 	pressure[thetaIdx * nPressurePitchInElements + phiIdx] = pressureVal;
 }
 
@@ -116,7 +120,7 @@ __global__ void applyPressureTheta
 	int thetaId = threadIdx.x;
 	int phiId = blockIdx.x;
 
-	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
+	//fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
 	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
 	fReal thetaSouth = gTheta + 0.5 * gridLen;
 	fReal thetaNorth = gTheta - 0.5 * gridLen;
@@ -133,7 +137,7 @@ __global__ void applyPressureTheta
 	fReal pressureTheta = pressureSouth - pressureNorth;
 	fReal deltaVTheta = -pressureTheta / gridLen;
 
-	output[thetaId * nPhi + phiId] = previousVTheta + deltaVTheta;
+	output[thetaId * nPitchInElements + phiId] = previousVTheta + deltaVTheta;
 }
 __global__ void applyPressurePhi
 (fReal* output,
@@ -160,7 +164,7 @@ __global__ void applyPressurePhi
 	fReal pressurePhi = pressureEast - pressureWest;
 	fReal deltaVPhi = -pressurePhi / (gridLen * sinf(gTheta));
 
-	output[thetaId * nPhi + phiId] = previousVPhi + deltaVPhi;
+	output[thetaId * nPitchInElements + phiId] = previousVPhi + deltaVPhi;
 }
 
 void KaminoSolver::projection()
@@ -175,20 +179,22 @@ void KaminoSolver::projection()
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
-	(gpuFFourier, 
-		nPhi, nTheta,
-		gridLen, radius, timeStep);
+	(this->gpuFFourier, 
+		this->nPhi, this->nTheta,
+		this->gridLen, this->radius, this->timeStep);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
 
+	// Note that cuFFT inverse returns results are SigLen times larger
 	checkCudaErrors((cudaError_t)cufftExecC2C(this->kaminoPlan,
 		this->gpuFFourier, this->gpuFFourier, CUFFT_INVERSE));
 	checkCudaErrors(cudaGetLastError());
 
 
 
+	// Siglen is nPhi
 	shiftFKernel<<<gridLayout, blockLayout>>>
 	(gpuFFourier,
 		gpuFReal, gpuFImag,
@@ -237,10 +243,12 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
+	pressure->copyBackToCPU();
+
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	applyPressureTheta<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(),
+		(velTheta->getGPUNextStep(),
 		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
 		gridLen);
 	checkCudaErrors(cudaGetLastError());
@@ -254,5 +262,9 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaGetLastError());
 
 	checkCudaErrors(cudaDeviceSynchronize());
+	velPhi->unbindTexture(&texProjVelPhi);
+	velTheta->unbindTexture(&texProjVelTheta);
+	pressure->unbindTexture(&texProjPressure);
+
 	swapAttrBuffers();
 }

@@ -19,6 +19,7 @@ private:
 	ComplexFourier* gpuFFourier;
 	fReal* gpuFReal;
 	fReal* gpuFImag;
+	fReal* gpuFZeroComponent;
 
 	/// Precompute these!
 	// nPhi by nTheta elements, but they should be retrieved by shared memories

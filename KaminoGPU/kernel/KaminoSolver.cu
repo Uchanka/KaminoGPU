@@ -27,6 +27,8 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 		sizeof(fReal) * nPhi * nTheta));
 	checkCudaErrors(cudaMalloc((void **)&gpuFImag,
 		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void**)&gpuFZeroComponent,
+		sizeof(fReal) * nTheta));
 
 	checkCudaErrors(cudaMalloc((void **)(&gpuA),
 		sizeof(fReal) * nPhi * nTheta));
@@ -70,6 +72,7 @@ KaminoSolver::~KaminoSolver()
 	checkCudaErrors(cudaFree(gpuFFourier));
 	checkCudaErrors(cudaFree(gpuFReal));
 	checkCudaErrors(cudaFree(gpuFImag));
+	checkCudaErrors(cudaFree(gpuFZeroComponent));
 	
 	checkCudaErrors(cudaFree(gpuA));
 	checkCudaErrors(cudaFree(gpuB));
@@ -78,9 +81,6 @@ KaminoSolver::~KaminoSolver()
 	delete this->velPhi;
 	delete this->velTheta;
 	delete this->pressure;
-
-	//delete[] cpuGridTypesBuffer;
-	//checkCudaErrors(cudaFree(gpuGridTypes));
 }
 
 void KaminoSolver::setTextureParams(table2D* tex)
@@ -153,7 +153,7 @@ void KaminoSolver::stepForward(fReal timeStep)
 	this->timeStep = timeStep;
 	advection();
 	//std::cout << "Advection completed" << std::endl;
-	geometric();
+	//geometric();
 	//std::cout << "Geometric completed" << std::endl;
 	//bodyForce();
 	//std::cout << "Body force application completed" << std::endl;
