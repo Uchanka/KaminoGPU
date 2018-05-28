@@ -115,6 +115,20 @@ __global__ void precomputeABCKernel
 			- 0.5 * cosThetaI / gridLen / sinThetaI;
 		B[index] = -2.0 / (gridLen * gridLen) - n * n / (sinThetaI * sinThetaI);
 		C[index] = 1.0 / (gridLen * gridLen) + 0.5 * cosThetaI / gridLen / sinThetaI;
+
+
+		if (i == 0)
+		{
+			fReal coef = powf(-1.0, n);
+			B[index] += coef * A[index];
+			A[index] = 0.0;
+		}
+		if (i == nTheta - 1)
+		{
+			fReal coef = powf(-1.0, n);
+			B[index] += coef * C[index];
+			C[index] = 0.0;
+		}
 	}
 	else
 	{
@@ -277,8 +291,8 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 			pos = vec3((i + centeredPhiOffset) * gridLen, (j + centeredThetaOffset) * gridLen, 0.0);
 			vel = vec3(0.0, velocityTheta, velocityPhi);
-			mapVToSphere(pos, vel);
-			mapPToSphere(pos);
+			//mapVToSphere(pos, vel);
+			//mapPToSphere(pos);
 
 			int idx = parts->addParticle();
 			float* p = parts->dataWrite<float>(pH, idx);

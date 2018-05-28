@@ -24,8 +24,8 @@ __global__ void fillDivergenceKernel
 	fReal halfStep = 0.5 * gridLen;
 	fReal phiEast = gridPhiCoord + halfStep;
 	fReal phiWest = gridPhiCoord - halfStep;
-	fReal thetaNorth = gridThetaCoord - halfStep;
 	fReal thetaSouth = gridThetaCoord + halfStep;
+	fReal thetaNorth = gridThetaCoord - halfStep;
 
 	// sample the vPhi at gridThetaCoord
 	fReal thetaTex = (gridThetaCoord - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
@@ -100,7 +100,7 @@ __global__ void shiftUKernel
 		fftIndex = nPhi - phiIdx;
 	fReal pressureVal = 0.0;
 	int bit = 0;
-	if (phiIdx & 2 == 0)
+	if (phiIdx % 2 == 0)
 		bit = 1;
 	else
 		bit = -1;
@@ -137,7 +137,7 @@ __global__ void applyPressureTheta
 }
 __global__ void applyPressurePhi
 (fReal* output,
-	size_t nTheta, size_t nPhi, size_t nPitchInElements,
+	size_t nPhi, size_t nTheta, size_t nPitchInElements,
 	fReal gridLen)
 {
 	int thetaId = threadIdx.x;
@@ -184,7 +184,7 @@ void KaminoSolver::projection()
 
 
 	checkCudaErrors((cudaError_t)cufftExecC2C(this->kaminoPlan,
-		gpuFFourier, gpuFFourier, CUFFT_INVERSE));
+		this->gpuFFourier, this->gpuFFourier, CUFFT_INVERSE));
 	checkCudaErrors(cudaGetLastError());
 
 
@@ -205,6 +205,8 @@ void KaminoSolver::projection()
 	crKernel<<<gridLayout, blockLayout, sharedMemSize>>>
 	(this->gpuA, this->gpuB, this->gpuC, this->gpuFReal, this->gpuUReal);
 	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
 	crKernel<<<gridLayout, blockLayout, sharedMemSize>>>
 	(this->gpuA, this->gpuB, this->gpuC, this->gpuFImag, this->gpuUImag);
 	checkCudaErrors(cudaGetLastError());
@@ -224,7 +226,7 @@ void KaminoSolver::projection()
 
 
 	checkCudaErrors((cudaError_t)cufftExecC2C(this->kaminoPlan,
-		gpuUFourier, gpuUFourier, CUFFT_FORWARD));
+		this->gpuUFourier, this->gpuUFourier, CUFFT_FORWARD));
 	checkCudaErrors(cudaGetLastError());
 
 
