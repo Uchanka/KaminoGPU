@@ -21,24 +21,33 @@ __global__ void fillDivergenceKernel
 	fReal vNorth = 0.0;
 	fReal vSouth = 0.0;
 
-	int uWestIndex = gridPhiId;
-	int uEastIndex = (uWestIndex + 1) % nPhi;
-	uWest = velPhi[gridThetaId * velPhiPitchInElements + uWestIndex];
-	uEast = velPhi[gridThetaId * velPhiPitchInElements + uEastIndex];
+	fReal halfStep = 0.5 * gridLen;
+	fReal phiEast = gridPhiCoord + halfStep;
+	fReal phiWest = gridPhiCoord - halfStep;
+	fReal thetaSouth = gridThetaCoord + halfStep;
+	fReal thetaNorth = gridThetaCoord - halfStep;
+
+	// sample the vPhi at gridThetaCoord
+	fReal thetaTex = (gridThetaCoord - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
+	// sample the vTheta at gridPhiCoord
+	fReal phiTex = (gridPhiCoord - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
+
+	fReal phiEastTex = (phiEast - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
+	fReal phiWestTex = (phiWest - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
+
+	uEast = tex2D<fReal>(texProjVelPhi, phiEastTex, thetaTex);
+	uWest = tex2D<fReal>(texProjVelPhi, phiWestTex, thetaTex);
+
 	if (gridThetaId != 0)
 	{
-		int vNorthIndex = gridThetaId - 1;
-		vNorth = velTheta[vNorthIndex * velThetaPitchInElements + gridPhiId];
+		fReal thetaNorthTex = (thetaNorth - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
+		vNorth = tex2D<fReal>(texProjVelTheta, phiTex, thetaNorthTex);
 	}
 	if (gridThetaId != nTheta - 1)
 	{
-		int vSouthIndex = gridThetaId;
-		vSouth = velTheta[vSouthIndex * velThetaPitchInElements + gridPhiId];
+		fReal thetaSouthTex = (thetaSouth - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
+		vSouth = tex2D<fReal>(texProjVelTheta, phiTex, thetaSouthTex);
 	}
-
-	fReal halfStep = 0.5 * gridLen;
-	fReal thetaSouth = gridThetaCoord + halfStep;
-	fReal thetaNorth = gridThetaCoord - halfStep;
 
 	fReal invGridSine = 1.0 / sinf(gridThetaCoord);
 	fReal sinNorth = sinf(thetaNorth);
