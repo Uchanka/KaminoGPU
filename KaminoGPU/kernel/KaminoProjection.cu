@@ -121,58 +121,44 @@ __global__ void shiftUKernel
 }
 
 __global__ void applyPressureTheta
-(fReal* output,
-	size_t nPhi, size_t nTheta, size_t nPitchInElements,
+(fReal* output, fReal* prev, fReal* pressure, size_t nPitchInElementsPressure,
+	size_t nPhi, size_t nTheta, size_t nPitchInElementsVTheta,
 	fReal gridLen)
 {
 	int thetaId = threadIdx.x;
 	int phiId = blockIdx.x;
 
-	//fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
-	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
-	fReal thetaSouth = gTheta + 0.5 * gridLen;
-	fReal thetaNorth = gTheta - 0.5 * gridLen;
+	int pressureThetaNorthId = thetaId;
+	int pressureThetaSouthId = thetaId + 1;
+	fReal pressureNorth = pressure[pressureThetaNorthId * nPitchInElementsPressure + phiId];
+	fReal pressureSouth = pressure[pressureThetaSouthId * nPitchInElementsPressure + phiId];
 
-	fReal texPhi = (fReal)phiId / nPhi;
-	fReal texTheta = (fReal)thetaId / nTheta;
-	fReal texThetaNorth = (thetaNorth - vThetaThetaOffset * gridLen) / pressureThetaNorm;
-	fReal texThetaSouth = (thetaSouth - vThetaThetaOffset * gridLen) / pressureThetaNorm;
-
-	fReal previousVTheta = tex2D<fReal>(texProjVelTheta, texPhi, texTheta);
-	fReal pressureNorth = tex2D<fReal>(texProjPressure, texPhi, texThetaNorth);
-	fReal pressureSouth = tex2D<fReal>(texProjPressure, texPhi, texThetaSouth);
-
-	fReal pressureTheta = pressureSouth - pressureNorth;
-	fReal deltaVTheta = -pressureTheta / gridLen;
-
-	output[thetaId * nPitchInElements + phiId] = previousVTheta + deltaVTheta;
+	fReal deltaVTheta = (pressureSouth - pressureNorth) / (-gridLen);
+	fReal previousVTheta = prev[thetaId * nPitchInElementsVTheta + phiId];
+	output[thetaId * nPitchInElementsVTheta + phiId] = previousVTheta + deltaVTheta;
 }
 __global__ void applyPressurePhi
-(fReal* output,
-	size_t nPhi, size_t nTheta, size_t nPitchInElements,
+(fReal* output, fReal* prev, fReal* pressure, size_t nPitchInElementsPressure,
+	size_t nPhi, size_t nTheta, size_t nPitchInElementsVPhi,
 	fReal gridLen)
 {
 	int thetaId = threadIdx.x;
 	int phiId = blockIdx.x;
 
-	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLen;
-	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
-	fReal phiEast = gPhi + 0.5 * gridLen;
-	fReal phiWest = gPhi - 0.5 * gridLen;
+	int pressurePhiWestId;
+	if (phiId == 0)
+		pressurePhiWestId = nPhi - 1;
+	else
+		pressurePhiWestId = phiId;
+	int pressurePhiEastId = phiId;
 
-	fReal texPhi = (fReal)phiId / nPhi;
-	fReal texTheta = (fReal)thetaId / nTheta;
-	fReal texPhiEast = (phiEast - vPhiPhiOffset * gridLen) / pressurePhiNorm;
-	fReal texPhiWest = (phiWest - vPhiPhiOffset * gridLen) / pressurePhiNorm;
+	fReal pressureWest = pressure[pressurePhiWestId * nPitchInElementsPressure + phiId];
+	fReal pressureEast = pressure[pressurePhiEastId * nPitchInElementsPressure + phiId];
 
-	fReal previousVPhi = tex2D<fReal>(texProjVelPhi, texPhi, texTheta);
-	fReal pressureEast = tex2D<fReal>(texProjPressure, texPhiEast, texTheta);
-	fReal pressureWest = tex2D<fReal>(texProjPressure, texPhiWest, texTheta);
-
-	fReal pressurePhi = pressureEast - pressureWest;
-	fReal deltaVPhi = -pressurePhi / (gridLen * sinf(gTheta));
-
-	output[thetaId * nPitchInElements + phiId] = previousVPhi + deltaVPhi;
+	fReal thetaBelt = (thetaId + centeredThetaOffset) * gridLen;
+	fReal deltaVPhi = (pressureEast - pressureWest) / (-gridLen * sinf(thetaBelt));
+	fReal previousVPhi = prev[thetaId * nPitchInElementsVPhi + phiId];
+	output[thetaId * nPitchInElementsVPhi + phiId] = previousVPhi + deltaVPhi;
 }
 
 void KaminoSolver::projection()
@@ -271,7 +257,7 @@ void KaminoSolver::projection()
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	applyPressureTheta<<<gridLayout, blockLayout>>>
-		(velTheta->getGPUNextStep(),
+		(velTheta->getGPUNextStep(), velTheta->getGPUThisStep(), pressure->getGPUThisStep(), pressure->getThisStepPitch() / sizeof(fReal),
 		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
 		gridLen);
 	checkCudaErrors(cudaGetLastError());
@@ -279,7 +265,7 @@ void KaminoSolver::projection()
 	gridLayout = dim3(velPhi->getNTheta());
 	blockLayout = dim3(velPhi->getNPhi());
 	applyPressurePhi<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(),
+	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), pressure->getGPUThisStep(), pressure->getThisStepPitch() / sizeof(fReal),
 		velPhi->getNPhi(), velPhi->getNTheta(), velPhi->getNextStepPitch() / sizeof(fReal),
 		gridLen);
 	checkCudaErrors(cudaGetLastError());
