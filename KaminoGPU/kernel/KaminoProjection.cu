@@ -92,14 +92,22 @@ __global__ void copy2UFourier
 	UFourierOutput[thetaIdx * nPhi + nIdx] = u;
 }
 
+__global__ void cacheZeroComponents
+(fReal* zeroComponentCache, ComplexFourier* input,
+	size_t nPhi)
+{
+	int thetaIdx = threadIdx.x;
+	zeroComponentCache[thetaIdx] = input[thetaIdx * nPhi + nPhi / 2].x;
+}
+
 __global__ void shiftUKernel
-(ComplexFourier* UFourierInput, fReal* pressure,
+(ComplexFourier* UFourierInput, fReal* pressure, fReal* zeroComponentCache,
 	size_t nPhi, size_t nTheta, size_t nPressurePitchInElements)
 {
 	int phiIdx = threadIdx.x;
 	int thetaIdx = blockIdx.x;
 	int fftIndex = 0;
-	fReal zeroComponent = UFourierInput[thetaIdx * nPhi + nPhi / 2].x;
+	fReal zeroComponent = zeroComponentCache[thetaIdx];
 	if (phiIdx != 0)
 		fftIndex = nPhi - phiIdx;
 	fReal pressureVal;
@@ -171,10 +179,8 @@ void KaminoSolver::projection()
 {
 	setTextureParams(&texProjVelPhi);
 	setTextureParams(&texProjVelTheta);
-	setTextureParams(&texProjPressure);
 	velPhi->bindTexture(&texProjVelPhi);
 	velTheta->bindTexture(&texProjVelTheta);
-	pressure->bindTexture(&texProjPressure);
 
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
@@ -195,6 +201,8 @@ void KaminoSolver::projection()
 
 
 	// Siglen is nPhi
+	gridLayout = dim3(nTheta);
+	blockLayout = dim3(nPhi);
 	shiftFKernel<<<gridLayout, blockLayout>>>
 	(gpuFFourier,
 		gpuFReal, gpuFImag,
@@ -213,6 +221,8 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
+	gridLayout = dim3(nPhi);
+	blockLayout = dim3(nTheta / 2);
 	crKernel<<<gridLayout, blockLayout, sharedMemSize>>>
 	(this->gpuA, this->gpuB, this->gpuC, this->gpuFImag, this->gpuUImag);
 	checkCudaErrors(cudaGetLastError());
@@ -231,18 +241,31 @@ void KaminoSolver::projection()
 
 
 
+	gridLayout = dim3(1);
+	blockLayout = dim3(nTheta);
+	cacheZeroComponents<<<gridLayout, blockLayout>>>
+	(gpuFZeroComponent, gpuUFourier, nPhi);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
+
 	checkCudaErrors((cudaError_t)cufftExecC2C(this->kaminoPlan,
 		this->gpuUFourier, this->gpuUFourier, CUFFT_FORWARD));
 	checkCudaErrors(cudaGetLastError());
 
 
 
+	gridLayout = dim3(nTheta);
+	blockLayout = dim3(nPhi);
 	shiftUKernel<<<gridLayout, blockLayout>>>
-	(gpuUFourier, pressure->getGPUThisStep(),
+	(gpuUFourier, pressure->getGPUThisStep(), this->gpuFZeroComponent,
 		nPhi, nTheta, pressure->getThisStepPitch() / sizeof(fReal));
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
+	setTextureParams(&texProjPressure);
+	pressure->bindTexture(&texProjPressure);
 	pressure->copyBackToCPU();
 
 	gridLayout = dim3(velTheta->getNTheta());
