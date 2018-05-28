@@ -7,8 +7,8 @@ static table2D texProjPressure;
 __global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *d_x);
 
 __global__ void fillDivergenceKernel
-(ComplexFourier* outputF,
-	size_t nPhi, size_t nTheta,
+(ComplexFourier* outputF, fReal* velPhi, fReal* velTheta,
+	size_t nPhi, size_t nTheta, size_t velPhiPitchInElements, size_t velThetaPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
 	int gridPhiId = threadIdx.x;
@@ -21,33 +21,24 @@ __global__ void fillDivergenceKernel
 	fReal vNorth = 0.0;
 	fReal vSouth = 0.0;
 
-	fReal halfStep = 0.5 * gridLen;
-	fReal phiEast = gridPhiCoord + halfStep;
-	fReal phiWest = gridPhiCoord - halfStep;
-	fReal thetaSouth = gridThetaCoord + halfStep;
-	fReal thetaNorth = gridThetaCoord - halfStep;
-
-	// sample the vPhi at gridThetaCoord
-	fReal thetaTex = (gridThetaCoord - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
-	// sample the vTheta at gridPhiCoord
-	fReal phiTex = (gridPhiCoord - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
-
-	fReal phiEastTex = (phiEast - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
-	fReal phiWestTex = (phiWest - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
-
-	uEast = tex2D<fReal>(texProjVelPhi, phiEastTex, thetaTex);
-	uWest = tex2D<fReal>(texProjVelPhi, phiWestTex, thetaTex);
-
+	int uWestIndex = gridPhiId;
+	int uEastIndex = (uWestIndex + 1) % nPhi;
+	uWest = velPhi[gridThetaId * velPhiPitchInElements + uWestIndex];
+	uEast = velPhi[gridThetaId * velPhiPitchInElements + uEastIndex];
 	if (gridThetaId != 0)
 	{
-		fReal thetaNorthTex = (thetaNorth - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
-		vNorth = tex2D<fReal>(texProjVelTheta, phiTex, thetaNorthTex);
+		int vNorthIndex = gridThetaId - 1;
+		vNorth = velTheta[vNorthIndex * velThetaPitchInElements + gridPhiId];
 	}
 	if (gridThetaId != nTheta - 1)
 	{
-		fReal thetaSouthTex = (thetaSouth - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
-		vSouth = tex2D<fReal>(texProjVelTheta, phiTex, thetaSouthTex);
+		int vSouthIndex = gridThetaId;
+		vSouth = velTheta[vSouthIndex * velThetaPitchInElements + gridPhiId];
 	}
+
+	fReal halfStep = 0.5 * gridLen;
+	fReal thetaSouth = gridThetaCoord + halfStep;
+	fReal thetaNorth = gridThetaCoord - halfStep;
 
 	fReal invGridSine = 1.0 / sinf(gridThetaCoord);
 	fReal sinNorth = sinf(thetaNorth);
@@ -125,8 +116,8 @@ __global__ void applyPressureTheta
 	size_t nPhi, size_t nTheta, size_t nPitchInElementsVTheta,
 	fReal gridLen)
 {
-	int thetaId = threadIdx.x;
-	int phiId = blockIdx.x;
+	int phiId = threadIdx.x;
+	int thetaId = blockIdx.x;
 
 	int pressureThetaNorthId = thetaId;
 	int pressureThetaSouthId = thetaId + 1;
@@ -142,18 +133,18 @@ __global__ void applyPressurePhi
 	size_t nPhi, size_t nTheta, size_t nPitchInElementsVPhi,
 	fReal gridLen)
 {
-	int thetaId = threadIdx.x;
-	int phiId = blockIdx.x;
+	int phiId = threadIdx.x;
+	int thetaId = blockIdx.x;
 
 	int pressurePhiWestId;
 	if (phiId == 0)
 		pressurePhiWestId = nPhi - 1;
 	else
-		pressurePhiWestId = phiId;
+		pressurePhiWestId = phiId - 1;
 	int pressurePhiEastId = phiId;
 
-	fReal pressureWest = pressure[pressurePhiWestId * nPitchInElementsPressure + phiId];
-	fReal pressureEast = pressure[pressurePhiEastId * nPitchInElementsPressure + phiId];
+	fReal pressureWest = pressure[thetaId * nPitchInElementsPressure + pressurePhiWestId];
+	fReal pressureEast = pressure[thetaId * nPitchInElementsPressure + pressurePhiEastId];
 
 	fReal thetaBelt = (thetaId + centeredThetaOffset) * gridLen;
 	fReal deltaVPhi = (pressureEast - pressureWest) / (-gridLen * sinf(thetaBelt));
@@ -171,8 +162,8 @@ void KaminoSolver::projection()
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
-	(this->gpuFFourier, 
-		this->nPhi, this->nTheta,
+	(this->gpuFFourier, this->velPhi->getGPUThisStep(), this->velTheta->getGPUThisStep(),
+		this->nPhi, this->nTheta, this->velPhi->getThisStepPitch() / sizeof(fReal), this->velTheta->getThisStepPitch() / sizeof(fReal),
 		this->gridLen, this->radius, this->timeStep);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
