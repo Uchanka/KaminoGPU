@@ -72,15 +72,6 @@ private:
 	/* distribute initial velocity values at grid points */
 	void initialize_velocity();
 	
-	/* sum of sine functions for velocity initialization */
-	fReal fPhi(const fReal x);
-	/* */
-	fReal gTheta(const fReal y);
-	/* */
-	fReal lPhi(const fReal x);
-	/* */
-	fReal mTheta(const fReal y);
-
 	void mapPToSphere(vec3& pos) const;
 	void mapVToSphere(vec3& pos, vec3& vel) const;
 	/* Convert to texture */

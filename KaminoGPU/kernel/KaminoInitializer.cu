@@ -52,15 +52,8 @@ void KaminoSolver::initialize_velocity()
 		u->setCPUValueAt(0, j, avgNoise);
 	}
 
-	// u_theta at poles is set to zero
-	for (size_t i = 0; i < v->getNPhi(); ++i)
-	{
-		v->setCPUValueAt(i, 0, 0);
-		v->setCPUValueAt(i, v->getNTheta() - 1, 0);
-	}
-
 	// set u_theta initial values using FBM curl noise
-	for (size_t j = 0; j < v->getNTheta() - 1; ++j)
+	for (size_t j = 0; j < v->getNTheta(); ++j)
 	{
 		for (size_t i = 0; i < v->getNPhi(); ++i)
 		{
@@ -106,7 +99,8 @@ fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)
 	return (1.0 - alpha) * from + alpha * to;
 }
 
-fReal KaminoSolver::interpNoise2D(const fReal x, const fReal y) const {
+fReal KaminoSolver::interpNoise2D(const fReal x, const fReal y) const
+{
 	fReal intX = std::floor(x);
 	fReal fractX = x - intX;
 	fReal intY = std::floor(y);
@@ -123,7 +117,8 @@ fReal KaminoSolver::interpNoise2D(const fReal x, const fReal y) const {
 	return kaminoLerpHost(i1, i2, fractY);
 }
 
-fReal KaminoSolver::rand(const vec2 vecA) const {
+fReal KaminoSolver::rand(const vec2 vecA) const
+{
 	// return pseudorandom number between -1 and 1
 	vec2 vecB = vec2(12.9898, 4.1414);
 	fReal dotProd = vecA[0] * vecB[0] + vecA[1] * vecB[1];

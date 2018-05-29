@@ -157,29 +157,6 @@ void KaminoSolver::stepForward(fReal timeStep)
 	this->timeElapsed += timeStep;
 }
 
-// Phi: 0 - 2pi  Theta: 0 - pi
-bool validatePhiTheta(fReal & phi, fReal & theta)
-{
-	int loops = static_cast<int>(std::floor(theta / M_2PI));
-	theta = theta - loops * M_2PI;
-	// Now theta is in 0-2pi range
-
-	bool isFlipped = false;
-
-	if (theta > M_PI)
-	{
-		theta = M_2PI - theta;
-		phi += M_PI;
-		isFlipped = true;
-	}
-
-	loops = static_cast<int>(std::floor(phi / M_2PI));
-	phi = phi - loops * M_2PI;
-	// Now phi is in 0-2pi range
-
-	return isFlipped;
-}
-
 void KaminoSolver::bodyForce()
 {
 	/// This is just a place holder now...
@@ -257,8 +234,8 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 			pos = vec3((i + centeredPhiOffset) * gridLen, (j + centeredThetaOffset) * gridLen, 0.0);
 			vel = vec3(0.0, velocityTheta, velocityPhi);
-			mapVToSphere(pos, vel);
-			mapPToSphere(pos);
+			//mapVToSphere(pos, vel);
+			//mapPToSphere(pos);
 
 			int idx = parts->addParticle();
 			float* p = parts->dataWrite<float>(pH, idx);
