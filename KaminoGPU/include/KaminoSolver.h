@@ -81,9 +81,6 @@ private:
 	/* */
 	fReal mTheta(const fReal y);
 
-	/* Tri-diagonal matrix solver */
-	void TDMSolve(fReal* a, fReal* b, fReal* c, fReal* d);
-
 	void mapPToSphere(vec3& pos) const;
 	void mapVToSphere(vec3& pos, vec3& vel) const;
 	/* Convert to texture */

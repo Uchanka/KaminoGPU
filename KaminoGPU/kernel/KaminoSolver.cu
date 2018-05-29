@@ -155,9 +155,6 @@ void KaminoSolver::stepForward(fReal timeStep)
 	projection();
 	//std::cout << "Projection completed" << std::endl;
 	this->timeElapsed += timeStep;
-
-	velPhi->copyBackToCPU();
-	velTheta->copyBackToCPU();
 }
 
 // Phi: 0 - 2pi  Theta: 0 - pi
@@ -225,6 +222,9 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 	size_t iWest, iEast, jNorth, jSouth;
 	fReal uWest, uEast, vNorth, vSouth;
+
+	velPhi->copyBackToCPU();
+	velTheta->copyBackToCPU();
 
 	for (size_t j = 0; j < nTheta; ++j)
 	{

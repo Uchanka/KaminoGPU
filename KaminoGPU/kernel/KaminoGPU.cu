@@ -35,7 +35,7 @@ void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
 	
-	//solver.write_data_bgeo(gridPath, 0);
+	solver.write_data_bgeo(gridPath, 0);
 
 	float T = 0.0;              // simulation time
 	for (int i = 1; i <= frames; i++) 
@@ -49,7 +49,7 @@ void Kamino::run()
 		T = i*DT;
 
 		std::cout << "Frame " << i << " is ready" << std::endl;
-		//solver.write_data_bgeo(gridPath, i);
+		solver.write_data_bgeo(gridPath, i);
 	}
 }
 
