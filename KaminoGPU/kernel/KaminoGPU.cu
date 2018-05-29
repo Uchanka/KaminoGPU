@@ -34,18 +34,8 @@ Kamino::~Kamino()
 void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
-	//KaminoQuantity* d = solver.getAttributeNamed("density");
-	//initializeDensity(d);
-	//gridType* g = solver.getGridTypeHandle();
-	//defineCellTypes(g);
-	//loadColorImage();
-
-	/*KaminoParticles particles(particleDensity, radius, M_PI / nTheta, &solver, nPhi, nTheta, densityImage, colorMap);
-	KaminoQuantity* u = solver.getAttributeNamed("u");
-	KaminoQuantity* v = solver.getAttributeNamed("v");*/
-
-	solver.write_data_bgeo(gridPath, 0);
-	//particles.write_data_bgeo(particlePath, 0);
+	
+	//solver.write_data_bgeo(gridPath, 0);
 
 	float T = 0.0;              // simulation time
 	for (int i = 1; i <= frames; i++) 
@@ -53,15 +43,13 @@ void Kamino::run()
 		while (T < i*DT) 
 		{
 			solver.stepForward(dt);
-			//particles.updatePositions(u, v, dt);
 			T += dt;
 		}
 		solver.stepForward(dt + i*DT - T);
-		//particles.updatePositions(u, v, dt);
 		T = i*DT;
 
-		solver.write_data_bgeo(gridPath, i);
-		//particles.write_data_bgeo(particlePath, i);
+		std::cout << "Frame " << i << " is ready" << std::endl;
+		//solver.write_data_bgeo(gridPath, i);
 	}
 }
 

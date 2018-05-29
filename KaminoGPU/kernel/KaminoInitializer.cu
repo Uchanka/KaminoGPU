@@ -5,59 +5,88 @@ void KaminoSolver::initialize_velocity()
 	KaminoQuantity* u = this->velPhi;
 	KaminoQuantity* v = this->velTheta;
 
-	fReal f = 0.0;
-	fReal g = 0.0;
-	size_t sizePhi = u->getNPhi();
-	size_t sizeTheta = u->getNTheta();
-	for (size_t j = 0; j < sizeTheta; ++j) {
-		for (size_t i = 0; i < sizePhi; ++i) {
-			f = fPhi(i * gridLen);
-			g = gTheta(j * gridLen);
-			u->setCPUValueAt(i, j, A + (f * g));
+	for (size_t j = 0; j < u->getNTheta(); ++j)
+	{
+		for (size_t i = 1; i < u->getNPhi(); ++i)
+		{
+			fReal ur_x = i * gridLen + gridLen / 2;
+			fReal ur_y = (j + 1) * gridLen;
+			fReal lr_x = i * gridLen + gridLen / 2;
+			fReal lr_y = j * gridLen;
+			fReal ul_x = i * gridLen - gridLen / 2;
+			fReal ul_y = (j + 1) * gridLen;
+			fReal ll_x = i * gridLen - gridLen / 2;
+			fReal ll_y = j * gridLen;
+			fReal noise_ur = FBM(ur_x, ur_y);
+			fReal noise_lr = FBM(lr_x, lr_y);
+			fReal noise_ul = FBM(ul_x, ul_y);
+			fReal noise_ll = FBM(ll_x, ll_y);
+			fReal noiseDy_l = (noise_ur - noise_lr);
+			fReal noiseDy_r = (noise_ul - noise_ll);
+			//fReal noiseDy_l = (noise_ur - noise_lr) / (radius * gridLen);
+			//fReal noiseDy_r = (noise_ul - noise_ll) / (radius * gridLen);
+			fReal avgNoise = (noiseDy_l + noiseDy_r) / 2.0;
+			u->setCPUValueAt(i, j, avgNoise);
 		}
 	}
+	// phi = 0 seam
+	for (size_t j = 0; j < u->getNTheta(); ++j)
+	{
+		fReal ur_x = gridLen / 2;
+		fReal ur_y = (j + 1) * gridLen;
+		fReal lr_x = gridLen / 2;
+		fReal lr_y = j * gridLen;
+		fReal ul_x = 2 * M_PI - gridLen / 2;
+		fReal ul_y = (j + 1) * gridLen;
+		fReal ll_x = 2 * M_PI - gridLen / 2;
+		fReal ll_y = j * gridLen;
+		fReal noise_ur = FBM(ur_x, ur_y);
+		fReal noise_lr = FBM(lr_x, lr_y);
+		fReal noise_ul = FBM(ul_x, ul_y);
+		fReal noise_ll = FBM(ll_x, ll_y);
+		fReal noiseDy_l = (noise_ur - noise_lr);
+		fReal noiseDy_r = (noise_ul - noise_ll);
+		//fReal noiseDy_l = (noise_ur - noise_lr) / (radius * gridLen);
+		//fReal noiseDy_r = (noise_ul - noise_ll) / (radius * gridLen);
+		fReal avgNoise = (noiseDy_l + noiseDy_r) / 2.0;
+		u->setCPUValueAt(0, j, avgNoise);
+	}
 
-	fReal l = 0.0;
-	fReal m = 0.0;
-	sizePhi = v->getNPhi();
-	sizeTheta = v->getNTheta();
+	// u_theta at poles is set to zero
+	for (size_t i = 0; i < v->getNPhi(); ++i)
+	{
+		v->setCPUValueAt(i, 0, 0);
+		v->setCPUValueAt(i, v->getNTheta() - 1, 0);
+	}
 
-	// rest of sphere
-	for (size_t j = 0; j < sizeTheta; ++j) {
-		for (size_t i = 0; i < sizePhi; ++i) {
-			l = lPhi(i * gridLen);
-			m = mTheta(j * gridLen);
-			v->setCPUValueAt(i, j, (l * m));
+	// set u_theta initial values using FBM curl noise
+	for (size_t j = 0; j < v->getNTheta() - 1; ++j)
+	{
+		for (size_t i = 0; i < v->getNPhi(); ++i)
+		{
+			fReal ur_x = (i + 1) * gridLen;
+			fReal ur_y = j * gridLen + gridLen / 2;
+			fReal lr_x = (i + 1) * gridLen;
+			fReal lr_y = j * gridLen - gridLen / 2;
+			fReal ul_x = i * gridLen;
+			fReal ul_y = j * gridLen + gridLen / 2;
+			fReal ll_x = i * gridLen;
+			fReal ll_y = j * gridLen + gridLen / 2;
+			fReal noise_ur = FBM(ur_x, ur_y);
+			fReal noise_lr = FBM(lr_x, lr_y);
+			fReal noise_ul = FBM(ul_x, ul_y);
+			fReal noise_ll = FBM(ll_x, ll_y);
+			fReal noiseDy_u = -1 * (noise_ur - noise_ul);
+			fReal noiseDy_d = -1 * (noise_lr - noise_ll);
+			//fReal noiseDy_u = -1 * (noise_ur - noise_ul) / (radius * gridLen * sin(j * gridLen + gridLen / 2));
+			//fReal noiseDy_d = -1 * (noise_lr - noise_ll) / (radius * gridLen * sin(j * gridLen - gridLen / 2));
+			fReal avgNoise = (noiseDy_u + noiseDy_d) / 2.0;
+			v->setCPUValueAt(i, j, avgNoise);
 		}
 	}
 }
 
-
-fReal KaminoSolver::fPhi(const fReal x)
-{
-	fReal arg = x;
-	return sin(arg) + 0.1 * B * std::cos(std::rand());
-}
-
-fReal KaminoSolver::gTheta(const fReal y)
-{
-	fReal arg = y;
-	return cos(arg) + 0.1 * C * std::sin(std::rand());
-}
-
-fReal KaminoSolver::lPhi(const fReal x)
-{
-	fReal arg = x;
-	return cos(arg) + 0.1 * D * std::sin(std::rand());
-}
-
-fReal KaminoSolver::mTheta(const fReal y)
-{
-	fReal arg = y;
-	return sin(arg) + 0.1 * E * std::cos(std::rand());
-}
-
-/*fReal KaminoSolver::FBM(const fReal x, const fReal y) {
+fReal KaminoSolver::FBM(const fReal x, const fReal y) {
 	fReal total = 0.0f;
 	fReal resolution = 1.0;
 	fReal persistance = 0.5;
@@ -68,9 +97,13 @@ fReal KaminoSolver::mTheta(const fReal y)
 		fReal amp = std::pow(persistance, i);
 		total += amp * interpNoise2D(x * freq / resolution, y * freq / resolution);
 	}
-	fReal a = 1 - persistance;  // normalization
 
-	return a * total / 2.0f;  // normalized, pseudorandom number between -1 and 1
+	return 100.0 * total;
+}
+
+fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)
+{
+	return (1.0 - alpha) * from + alpha * to;
 }
 
 fReal KaminoSolver::interpNoise2D(const fReal x, const fReal y) const {
@@ -80,45 +113,20 @@ fReal KaminoSolver::interpNoise2D(const fReal x, const fReal y) const {
 	fReal fractY = y - intY;
 
 	fReal v1 = rand(vec2(intX, intY));
-	fReal v2 = rand(Eigen::Matrix<fReal, 2, 1>(intX + 1, intY));
-	fReal v3 = rand(Eigen::Matrix<fReal, 2, 1>(intX, intY + 1));
-	fReal v4 = rand(Eigen::Matrix<fReal, 2, 1>(intX + 1, intY + 1));
+	fReal v2 = rand(vec2(intX + 1, intY));
+	fReal v3 = rand(vec2(intX, intY + 1));
+	fReal v4 = rand(vec2(intX + 1, intY + 1));
 
 	// interpolate for smooth transitions
-	fReal i1 = KaminoLerp(v1, v2, fractX);
-	fReal i2 = KaminoLerp(v3, v4, fractX);
-	return KaminoLerp(i1, i2, fractY);
+	fReal i1 = kaminoLerpHost(v1, v2, fractX);
+	fReal i2 = kaminoLerpHost(v3, v4, fractX);
+	return kaminoLerpHost(i1, i2, fractY);
 }
 
-fReal KaminoSolver::rand(const Eigen::Matrix<fReal, 2, 1> vecA) const {
+fReal KaminoSolver::rand(const vec2 vecA) const {
 	// return pseudorandom number between -1 and 1
-	Eigen::Matrix<fReal, 2, 1> vecB = Eigen::Matrix<fReal, 2, 1>(12.9898, 4.1414);
-	fReal val = sin(vecA.dot(vecB) * 43758.5453);
+	vec2 vecB = vec2(12.9898, 4.1414);
+	fReal dotProd = vecA[0] * vecB[0] + vecA[1] * vecB[1];
+	fReal val = sin(dotProd * 43758.5453);
 	return val - std::floor(val);
-}
-
-void KaminoSolver::initialize_density()
-{
-	for (size_t i = 0; i < nPhi; ++i)
-	{
-		for (size_t j = 0; j < nTheta; ++j)
-		{
-			centeredAttr["density"]->setValueAt(i, j, 0.0);
-		}
-	}
-}*/
-
-
-void KaminoSolver::initialize_boundary()
-{
-	for (size_t gridX = 0; gridX != this->nPhi / 2; ++gridX)
-	{
-		//this->gridTypes[getIndex(gridX, nTheta / 2)] = SOLIDGRID;
-		//this->gridTypes[getIndex(gridX, this->nTheta - 1)] = SOLIDGRID;
-	}
-	/*for (size_t gridY = 0; gridY != this->nTheta; ++gridY)
-	{
-	this->gridTypes[getIndex(0, gridY)] = SOLIDGRID;
-	this->gridTypes[getIndex(nPhi / 2, gridY)] = SOLIDGRID;
-	}*/
 }

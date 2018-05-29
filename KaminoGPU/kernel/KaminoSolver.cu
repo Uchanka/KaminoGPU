@@ -45,15 +45,8 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	this->pressure = new KaminoQuantity("p", nPhi, nTheta,
 		centeredPhiOffset, centeredThetaOffset);
 
-	/*this->cpuGridTypesBuffer = new gridType[nPhi * nTheta];
-	checkCudaErrors(cudaMalloc((void **)(this->gpuGridTypes),
-		sizeof(gridType) * nPhi * nTheta));*/
-
 	initialize_velocity();
 	copyVelocity2GPU();
-
-	initialize_boundary();
-	//copyGridType2GPU();
 
 	int sigLenArr[1];
 	sigLenArr[0] = nPhi;
@@ -81,6 +74,8 @@ KaminoSolver::~KaminoSolver()
 	delete this->velPhi;
 	delete this->velTheta;
 	delete this->pressure;
+
+	checkCudaErrors(cudaDeviceReset());
 }
 
 void KaminoSolver::setTextureParams(table2D* tex)
@@ -191,35 +186,6 @@ bool validatePhiTheta(fReal & phi, fReal & theta)
 void KaminoSolver::bodyForce()
 {
 	/// This is just a place holder now...
-}
-
-/* Tri-diagonal matrix solver */
-void KaminoSolver::TDMSolve(fReal* a, fReal* b, fReal* c, fReal* d)
-{
-	// |b0 c0 0 ||x0| |d0|
-	// |a1 b1 c1||x1|=|d1|
-	// |0  a2 b2||x2| |d2|
-
-	int n = nTheta;
-	n--; // since we index from 0
-	c[0] /= b[0];
-	d[0] /= b[0];
-
-	for (int i = 1; i < n; i++) {
-		c[i] /= b[i] - a[i] * c[i - 1];
-		d[i] = (d[i] - a[i] * d[i - 1]) / (b[i] - a[i] * c[i - 1]);
-	}
-
-	d[n] = (d[n] - a[n] * d[n - 1]) / (b[n] - a[n] * c[n - 1]);
-
-	for (int i = n; i-- > 0;) {
-		d[i] -= c[i] * d[i + 1];
-	}
-}
-
-gridType KaminoSolver::getGridTypeAt(size_t x, size_t y)
-{
-	return this->cpuGridTypesBuffer[getIndex(x, y)];
 }
 
 /*KaminoQuantity* KaminoSolver::getAttributeNamed(std::string name)

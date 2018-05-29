@@ -31,11 +31,6 @@ private:
 	fReal* gpuC;
 	void precomputeABCCoef();
 
-	/* Grid types */
-	gridType* cpuGridTypesBuffer;
-	gridType* gpuGridTypes;
-	void copyGridType2GPU();
-
 	/* Grid dimensions */
 	size_t nPhi;
 	size_t nTheta;
@@ -65,9 +60,6 @@ private:
 	fReal timeStep;
 	fReal timeElapsed;
 
-	// Is it solid? or fluid? or even air?
-	gridType getGridTypeAt(size_t x, size_t y);
-
 	/// Kernel calling from here
 	void advection();
 	void geometric();
@@ -79,9 +71,7 @@ private:
 
 	/* distribute initial velocity values at grid points */
 	void initialize_velocity();
-	/* which grids are solid? */
-	void initialize_boundary();
-
+	
 	/* sum of sine functions for velocity initialization */
 	fReal fPhi(const fReal x);
 	/* */
@@ -98,8 +88,14 @@ private:
 	void mapVToSphere(vec3& pos, vec3& vel) const;
 	/* Convert to texture */
 	void setTextureParams(table2D* tex);
+
+	/* FBM noise function for velocity distribution */
+	fReal FBM(const fReal x, const fReal y);
+	/* 2D noise interpolation function for smooth FBM noise */
+	fReal interpNoise2D(const fReal x, const fReal y) const;
+	/* returns a pseudorandom number between -1 and 1 */
+	fReal rand(const vec2 vecA) const;
 public:
-	
 	KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 		fReal A, int B, int C, int D, int E);
 	~KaminoSolver();
