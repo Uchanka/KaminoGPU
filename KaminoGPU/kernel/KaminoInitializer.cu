@@ -91,7 +91,7 @@ fReal KaminoSolver::FBM(const fReal x, const fReal y) {
 		total += amp * interpNoise2D(x * freq / resolution, y * freq / resolution);
 	}
 
-	return 100.0 * total;
+	return 10.0 * total;
 }
 
 fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)

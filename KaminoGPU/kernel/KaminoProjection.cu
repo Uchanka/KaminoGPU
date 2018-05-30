@@ -34,13 +34,13 @@ __global__ void fillDivergenceKernel
 
 	if (gridThetaId != 0)
 	{
-		int thetaNorth = gridThetaId - 1;
-		vNorth = velTheta[thetaNorth * velThetaPitchInElements + gridPhiId];
+		int thetaNorthIdx = gridThetaId - 1;
+		vNorth = velTheta[thetaNorthIdx * velThetaPitchInElements + gridPhiId];
 	}
 	if (gridThetaId != nTheta - 1)
 	{
-		int thetaSouth = gridThetaId;
-		vSouth = velTheta[thetaSouth * velThetaPitchInElements + gridPhiId];
+		int thetaSouthIdx = gridThetaId;
+		vSouth = velTheta[thetaSouthIdx * velThetaPitchInElements + gridPhiId];
 	}
 
 	fReal invGridSine = 1.0 / sinf(gridThetaCoord);
@@ -157,11 +157,6 @@ __global__ void applyPressurePhi
 
 void KaminoSolver::projection()
 {
-	setTextureParams(&texProjVelPhi);
-	setTextureParams(&texProjVelTheta);
-	velPhi->bindTexture(&texProjVelPhi);
-	velTheta->bindTexture(&texProjVelTheta);
-
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
@@ -244,17 +239,16 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	setTextureParams(&texProjPressure);
-	pressure->bindTexture(&texProjPressure);
 	pressure->copyBackToCPU();
 
-	gridLayout = dim3(velTheta->getNTheta());
+	gridLayout = dim3(velTheta->getNTheta() - 1);
 	blockLayout = dim3(velTheta->getNPhi());
 	applyPressureTheta<<<gridLayout, blockLayout>>>
 		(velTheta->getGPUNextStep(), velTheta->getGPUThisStep(), pressure->getGPUThisStep(), pressure->getThisStepPitch() / sizeof(fReal),
 		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
 		gridLen);
 	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 
 	gridLayout = dim3(velPhi->getNTheta());
 	blockLayout = dim3(velPhi->getNPhi());
@@ -263,11 +257,7 @@ void KaminoSolver::projection()
 		velPhi->getNPhi(), velPhi->getNTheta(), velPhi->getNextStepPitch() / sizeof(fReal),
 		gridLen);
 	checkCudaErrors(cudaGetLastError());
-
 	checkCudaErrors(cudaDeviceSynchronize());
-	velPhi->unbindTexture(&texProjVelPhi);
-	velTheta->unbindTexture(&texProjVelTheta);
-	pressure->unbindTexture(&texProjPressure);
 
 	swapAttrBuffers();
 }
