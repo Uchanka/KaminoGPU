@@ -3,7 +3,7 @@
 cudaChannelFormatDesc KaminoQuantity::channelFormat
 = cudaCreateChannelDesc(sizeof(fReal) * byte2Bits, 0, 0, 0, cudaChannelFormatKindFloat);
 
-void KaminoQuantity::bindTexture(table2D* tex)
+/*void KaminoQuantity::bindTexture(table2D* tex)
 {
 	checkCudaErrors(cudaBindTexture2D(0, tex, gpuThisStep, &desc,
 		nPhi, nTheta, thisStepPitch));
@@ -12,7 +12,7 @@ void KaminoQuantity::bindTexture(table2D* tex)
 void KaminoQuantity::unbindTexture(table2D* tex)
 {
 	checkCudaErrors(cudaUnbindTexture(tex));
-}
+}*/
 
 void KaminoQuantity::copyToGPU()
 {

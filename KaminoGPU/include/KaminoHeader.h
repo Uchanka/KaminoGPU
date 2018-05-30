@@ -38,7 +38,7 @@
 # define vPhiPhiOffset -0.5
 # define vPhiThetaOffset 0.5
 # define vThetaPhiOffset 0.0
-# define vThetaThetaOffset 1.0
+# define vThetaThetaOffset 0.0
 
 # define getIndex(phi, theta) (theta * this->nPhi + phi)
 
@@ -48,7 +48,7 @@
 typedef float fReal;
 typedef cufftComplex ComplexFourier;
 
-typedef texture<fReal, 2, cudaReadModeElementType> table2D;
+//typedef texture<fReal, 2, cudaReadModeElementType> table2D;
 
 const size_t byte2Bits = 8;
 
@@ -60,4 +60,4 @@ enum gridType { FLUIDGRID, SOLIDGRID };
 
 enum Coord { phi, theta };
 
-bool validatePhiTheta(fReal& phi, fReal& theta);
+__device__ bool validatePhiTheta(fReal& phi, fReal& theta);

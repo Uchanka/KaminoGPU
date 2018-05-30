@@ -40,7 +40,7 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 
 	this->velPhi = new KaminoQuantity("velPhi", nPhi, nTheta,
 		vPhiPhiOffset, vPhiThetaOffset);
-	this->velTheta = new KaminoQuantity("velTheta", nPhi, nTheta - 1,
+	this->velTheta = new KaminoQuantity("velTheta", nPhi, nTheta + 1,
 		vThetaPhiOffset, vThetaThetaOffset);
 	this->pressure = new KaminoQuantity("p", nPhi, nTheta,
 		centeredPhiOffset, centeredThetaOffset);
@@ -78,13 +78,36 @@ KaminoSolver::~KaminoSolver()
 	checkCudaErrors(cudaDeviceReset());
 }
 
-void KaminoSolver::setTextureParams(table2D* tex)
+// Phi: 0 - 2pi  Theta: 0 - pi
+__device__ bool validatePhiTheta(fReal &phi, fReal &theta)
+{
+	int loops = static_cast<int>(std::floorf(theta / M_2PI));
+	theta = theta - loops * M_2PI;
+	// Now theta is in 0-2pi range
+
+	bool isFlipped = false;
+
+	if (theta > M_PI)
+	{
+		theta = M_2PI - theta;
+		phi += M_PI;
+		isFlipped = true;
+	}
+
+	loops = static_cast<int>(std::floorf(phi / M_2PI));
+	phi = phi - loops * M_2PI;
+	// Now phi is in 0-2pi range
+
+	return isFlipped;
+}
+
+/*void KaminoSolver::setTextureParams(table2D* tex)
 {
 	tex->addressMode[0] = cudaAddressModeWrap;
 	tex->addressMode[1] = cudaAddressModeMirror;
 	tex->filterMode = cudaFilterModeLinear;
 	tex->normalized = true;
-}
+}*/
 
 void KaminoSolver::copyVelocity2GPU()
 {
