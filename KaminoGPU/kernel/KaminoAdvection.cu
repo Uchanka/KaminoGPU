@@ -1,7 +1,13 @@
-# include "KaminoSolver.h"
+# include "KaminoSolver.cuh"
 
 static table2D texAdvVelPhi;
 static table2D texAdvVelTheta;
+
+static __constant__ size_t nPhiGlobal;
+static __constant__ size_t nThetaGlobal;
+static __constant__ fReal radiusGlobal;
+static __constant__ fReal timeStepGlobal;
+static __constant__ fReal gridLenGlobal;
 
 __device__ fReal validateTex(fReal& phiTex, fReal& thetaTex)
 {
@@ -219,7 +225,15 @@ void KaminoSolver::advection()
 	velTheta->bindTexture(&texAdvVelTheta);
 
 
+
+	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobal, &(this->radius), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, &(this->timeStep), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
 	
+
+
 	///kernel call goes here
 	// Advect Phi
 	dim3 gridLayout = dim3(velPhi->getNTheta());

@@ -1,4 +1,4 @@
-# include "../include/KaminoQuantity.h"
+# include "../include/KaminoQuantity.cuh"
 
 cudaChannelFormatDesc KaminoQuantity::channelFormat
 = cudaCreateChannelDesc(sizeof(fReal) * byte2Bits, 0, 0, 0, cudaChannelFormatKindFloat);

@@ -1,5 +1,4 @@
-# include "../include/KaminoSolver.h"
-# include "../include/CubicSolver.h"
+# include "../include/KaminoSolver.cuh"
 
 // CONSTRUCTOR / DESTRUCTOR >>>>>>>>>>
 
@@ -149,7 +148,6 @@ void KaminoSolver::precomputeABCCoef()
 void KaminoSolver::stepForward(fReal timeStep)
 {
 	this->timeStep = timeStep;
-	timeStepGlobal = timeStep;
 
 	advection();
 	geometric();

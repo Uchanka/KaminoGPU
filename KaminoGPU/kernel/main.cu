@@ -1,4 +1,4 @@
-# include "../include/KaminoGPU.h"
+# include "../include/KaminoGPU.cuh"
 # include <fstream>
 
 int main(int argc, char** argv)

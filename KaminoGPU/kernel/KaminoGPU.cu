@@ -1,4 +1,4 @@
-# include "../include/KaminoGPU.h"
+# include "../include/KaminoGPU.cuh"
 # define WRITE_BGEO
 
 Kamino::Kamino(fReal radius, size_t nTheta, fReal particleDensity,
@@ -12,26 +12,10 @@ Kamino::Kamino(fReal radius, size_t nTheta, fReal particleDensity,
 	A(A), B(B), C(C), D(D), E(E),
 	gridPath(gridPath), particlePath(particlePath),
 	densityImage(densityImage), solidImage(solidImage), colorImage(colorImage)
-{
-	size_t constantHostIntVars[2];
-	fReal constantHostRealVars[3];
-
-	constantHostIntVars[nThetaIdx] = nTheta;
-	constantHostIntVars[nPhiIdx] = nPhi;
-
-	constantHostRealVars[radiusIdx] = radius;
-	constantHostRealVars[timeStepIdx] = dt;
-	constantHostRealVars[gridLenIdx] = gridLen;
-
-	checkCudaErrors(cudaMemcpyToSymbol(constantIntVars, constantHostIntVars,
-		2 * sizeof(size_t), 0, cudaMemcpyHostToDevice));
-	checkCudaErrors(cudaMemcpyToSymbol(constantRealVars, constantHostRealVars,
-		3 * sizeof(fReal), 0, cudaMemcpyHostToDevice));
-}
+{}
 
 Kamino::~Kamino()
-{
-}
+{}
 
 void Kamino::run()
 {

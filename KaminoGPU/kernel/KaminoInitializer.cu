@@ -1,4 +1,4 @@
-# include "../include/KaminoSolver.h"
+# include "../include/KaminoSolver.cuh"
 
 void KaminoSolver::initialize_velocity()
 {

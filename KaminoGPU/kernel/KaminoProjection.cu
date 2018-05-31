@@ -1,8 +1,14 @@
-# include "../include/KaminoSolver.h"
+# include "../include/KaminoSolver.cuh"
 
 static table2D texProjVelPhi;
 static table2D texProjVelTheta;
 static table2D texProjPressure;
+
+static __constant__ size_t nPhiGlobal;
+static __constant__ size_t nThetaGlobal;
+static __constant__ fReal radiusGlobal;
+static __constant__ fReal timeStepGlobal;
+static __constant__ fReal gridLenGlobal;
 
 __global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *d_x);
 
@@ -151,6 +157,14 @@ __global__ void applyPressurePhi
 
 void KaminoSolver::projection()
 {
+	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobal, &(this->radius), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, &(this->timeStep), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
+
+
+
 	dim3 gridLayout(nTheta);
 	dim3 blockLayout(nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>

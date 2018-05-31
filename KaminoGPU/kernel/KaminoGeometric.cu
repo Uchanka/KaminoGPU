@@ -1,7 +1,13 @@
-# include "../include/KaminoSolver.h"
+# include "../include/KaminoSolver.cuh"
 
 static table2D texGeoVelPhi;
 static table2D texGeoVelTheta;
+
+static __constant__ size_t nPhiGlobal;
+static __constant__ size_t nThetaGlobal;
+static __constant__ fReal radiusGlobal;
+static __constant__ fReal timeStepGlobal;
+static __constant__ fReal gridLenGlobal;
 
 __device__ fReal _root3(fReal x)
 {
@@ -127,6 +133,14 @@ void KaminoSolver::geometric()
 	setTextureParams(&texGeoVelTheta);
 	velPhi->bindTexture(&texGeoVelPhi);
 	velTheta->bindTexture(&texGeoVelTheta);
+
+
+
+	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, (&this->nPhi), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, (&this->nTheta), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobal, (&this->radius), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, (&this->timeStep), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, (&this->gridLen), sizeof(fReal)));
 
 
 

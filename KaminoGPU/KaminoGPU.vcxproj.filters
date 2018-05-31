@@ -4,37 +4,26 @@
     <Filter Include="include">
       <UniqueIdentifier>{f4cec9d5-80f3-457e-bb93-b3d160314a1b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src">
-      <UniqueIdentifier>{8ce6ab40-5b02-45ea-8ec5-25e8c9a2d46f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="kernel">
       <UniqueIdentifier>{7b12c89e-625d-415b-b3d8-80dcb50201f7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\KaminoGPU.h">
+    <ClInclude Include="include\KaminoHeader.cuh">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\KaminoQuantity.h">
+    <ClInclude Include="include\KaminoQuantity.cuh">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\KaminoSolver.h">
+    <ClInclude Include="include\KaminoGPU.cuh">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\KaminoHeader.h">
+    <ClInclude Include="include\vectorUtil.cuh">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\KaminoParticles.h">
+    <ClInclude Include="include\KaminoSolver.cuh">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\vectorUtil.h">
-      <Filter>include</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="src\vectorUtil.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\tdm.cu">
@@ -62,6 +51,9 @@
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoGPU.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\vectorUtil.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>

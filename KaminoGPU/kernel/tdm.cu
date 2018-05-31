@@ -1,4 +1,4 @@
-# include "KaminoHeader.h"
+# include "KaminoHeader.cuh"
 
 __global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *d_x)
 {
