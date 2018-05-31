@@ -108,12 +108,12 @@ fReal* KaminoQuantity::getGPUNextStep()
 	return this->gpuNextStep;
 }
 
-size_t KaminoQuantity::getThisStepPitch()
+size_t KaminoQuantity::getThisStepPitchInElements()
 {
-	return this->thisStepPitch;
+	return this->thisStepPitch / sizeof(fReal);
 }
 
-size_t KaminoQuantity::getNextStepPitch()
+size_t KaminoQuantity::getNextStepPitchInElements()
 {
-	return this->nextStepPitch;
+	return this->nextStepPitch / sizeof(fReal);
 }

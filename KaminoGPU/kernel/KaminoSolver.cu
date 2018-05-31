@@ -11,14 +11,6 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	timeStep(0.0), timeElapsed(0.0),
 	A(A), B(B), C(C), D(D), E(E)
 {
-	// Global variable assigning
-	radiusGlobal = radius;
-	nPhiGlobal = nPhi;
-	nThetaGlobal = nTheta;
-	gridLenGlobal = gridLen;
-	// Timestep would be assigned in stepForward phase
-
-
 	/// Replace it later with functions from helper_cuda.h!
 	checkCudaErrors(cudaSetDevice(0));
 

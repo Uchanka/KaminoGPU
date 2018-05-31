@@ -68,8 +68,8 @@ public:
 	fReal* getGPUThisStep();
 	fReal* getGPUNextStep();
 
-	size_t getThisStepPitch();
-	size_t getNextStepPitch();
+	size_t getThisStepPitchInElements();
+	size_t getNextStepPitchInElements();
 
 	static cudaChannelFormatDesc channelFormat;
 };

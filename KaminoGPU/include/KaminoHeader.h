@@ -32,7 +32,7 @@
 # define vPhiPhiNorm M_2PI;
 # define vPhiThetaNorm M_PI;
 # define vThetaPhiNorm M_2PI;
-# define vThetaThetaNorm (M_PI - 2 * gridLen)
+# define vThetaThetaNorm (M_PI - 2 * gridLenGlobal)
 # define pressurePhiNorm M_2PI
 # define pressureThetaNorm M_PI
 # define vPhiPhiOffset -0.5
@@ -56,14 +56,19 @@ const fReal density = 1000.0;
 const fReal uSolid = 0.0;
 const fReal vSolid = 0.0;
 
-size_t nThetaGlobal;
-size_t nPhiGlobal;
-fReal radiusGlobal;
-fReal timeStepGlobal;
-fReal gridLenGlobal;
-
 enum gridType { FLUIDGRID, SOLIDGRID };
 
 enum Coord { phi, theta };
 
-bool validatePhiTheta(fReal& phi, fReal& theta);
+__constant__ size_t constantIntVars[2];
+__constant__ fReal constantRealVars[3];
+
+enum globalIntVars { nThetaIdx, nPhiIdx };
+enum globalRealVars { radiusIdx, timeStepIdx, gridLenIdx };
+
+# define nThetaGlobal constantIntVars[nThetaIdx]
+# define nPhiGlobal constantIntVars[nPhiIdx]
+
+# define radiusGlobal constantRealVars[radiusIdx]
+# define timeStepGlobal constantRealVars[timeStepIdx]
+# define gridLenGlobal constantRealVars[gridLenIdx]

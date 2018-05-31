@@ -53,8 +53,8 @@ __global__ void advectionVPhiKernel
 	// Traced halfway in phi-theta space
 	fReal midPhi = gPhi - 0.5 * deltaPhi;
 	fReal midTheta = gTheta - 0.5 * deltaTheta;
-	fReal midPhiTex = (midPhi - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
-	fReal midThetaTex = (midTheta - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
+	fReal midPhiTex = (midPhi - vPhiPhiOffset * gridLenGlobal) / vPhiPhiNorm;
+	fReal midThetaTex = (midTheta - vPhiThetaOffset * gridLenGlobal) / vPhiThetaNorm;
 	fReal ret = validateTex(midPhiTex, midThetaTex);
 
 	fReal muPhi = tex2D<fReal>(texAdvVelPhi, midPhiTex, midThetaTex);
@@ -67,8 +67,8 @@ __global__ void advectionVPhiKernel
 	deltaTheta = averuTheta * cofTheta;
 	fReal pPhi = gPhi - deltaPhi;
 	fReal pTheta = gTheta - deltaTheta;
-	fReal pPhiTex = (pPhi - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
-	fReal pThetaTex = (pTheta - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
+	fReal pPhiTex = (pPhi - vPhiPhiOffset * gridLenGlobal) / vPhiPhiNorm;
+	fReal pThetaTex = (pTheta - vPhiThetaOffset * gridLenGlobal) / vPhiThetaNorm;
 	ret = validateTex(pPhi, pTheta);
 
 	fReal advectedVal = tex2D<fReal>(texAdvVelPhi, pPhiTex, pThetaTex);
@@ -77,28 +77,26 @@ __global__ void advectionVPhiKernel
 };
 
 __global__ void advectionVThetaKernel
-(fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitchInElements,
-	fReal gridLen, fReal radius, fReal timeStep)
+(fReal* attributeOutput, size_t nPitchInElements)
 {
 	// Index
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLen;
-	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
+	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLenGlobal;
+	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;
 
 	// Coord in u-v texture space
-	fReal gPhiTex = (gPhi - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
-	fReal gThetaTex = (gTheta - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
+	fReal gPhiTex = (gPhi - vThetaPhiOffset * gridLenGlobal) / vThetaPhiNorm;
+	fReal gThetaTex = (gTheta - vThetaThetaOffset * gridLenGlobal) / vThetaThetaNorm;
 
 	// Sample the speed
 	fReal guPhi = tex2D<fReal>(texAdvVelPhi, gPhiTex, gThetaTex);
 	fReal guTheta = tex2D<fReal>(texAdvVelTheta, gPhiTex, gThetaTex);
 
-	fReal latRadius = radius * sinf(gTheta);
-	fReal cofPhi = timeStep / latRadius;
-	fReal cofTheta = timeStep / radius;
+	fReal latRadius = radiusGlobal * sinf(gTheta);
+	fReal cofPhi = timeStepGlobal / latRadius;
+	fReal cofTheta = timeStepGlobal / radiusGlobal;
 
 	fReal deltaPhi = guPhi * cofPhi;
 	fReal deltaTheta = guTheta * cofTheta;
@@ -106,8 +104,8 @@ __global__ void advectionVThetaKernel
 	// Traced halfway in phi-theta space
 	fReal midPhi = gPhi - 0.5 * deltaPhi;
 	fReal midTheta = gTheta - 0.5 * deltaTheta;
-	fReal midPhiTex = (midPhi - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
-	fReal midThetaTex = (midTheta - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
+	fReal midPhiTex = (midPhi - vThetaPhiOffset * gridLenGlobal) / vThetaPhiNorm;
+	fReal midThetaTex = (midTheta - vThetaThetaOffset * gridLenGlobal) / vThetaThetaNorm;
 	fReal ret = validateTex(midPhiTex, midThetaTex);
 
 	fReal muPhi = tex2D(texAdvVelPhi, midPhiTex, midThetaTex);
@@ -120,11 +118,11 @@ __global__ void advectionVThetaKernel
 	deltaTheta = averuTheta * cofTheta;
 	fReal pPhi = gPhi - deltaPhi;
 	fReal pTheta = gTheta - deltaTheta;
-	fReal pPhiTex = (pPhi - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
-	fReal pThetaTex = (pTheta - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
+	fReal pPhiTex = (pPhi - vThetaPhiOffset * gridLenGlobal) / vThetaPhiNorm;
+	fReal pThetaTex = (pTheta - vThetaThetaOffset * gridLenGlobal) / vThetaThetaNorm;
 	ret = validateTex(midPhiTex, midThetaTex);
 
-	fReal advectedVal = ret * tex2D(texAdvVelTheta, pPhiTex, pThetaTex);
+	fReal advectedVal = ret * tex2D<fReal>(texAdvVelTheta, pPhiTex, pThetaTex);
 
 	attributeOutput[thetaId * nPitchInElements + phiId] = advectedVal;
 }
@@ -215,7 +213,6 @@ __global__ void advectionVThetaKernel
 
 void KaminoSolver::advection()
 {
-	//bindVelocity2Tex(texVelPhi, texVelTheta);
 	setTextureParams(&texAdvVelPhi);
 	setTextureParams(&texAdvVelTheta);
 	velPhi->bindTexture(&texAdvVelPhi);
@@ -228,8 +225,7 @@ void KaminoSolver::advection()
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
 	advectionVPhiKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velPhi->getNTheta(), velPhi->getNPhi(), velPhi->getNextStepPitch() / sizeof(fReal),
-	gridLen, radius, timeStep);
+	(velPhi->getGPUNextStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -238,8 +234,7 @@ void KaminoSolver::advection()
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	advectionVThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(), velTheta->getNTheta(), velTheta->getNPhi(), velTheta->getNextStepPitch() / sizeof(fReal),
-	gridLen, radius, timeStep);
+	(velTheta->getGPUNextStep(), velTheta->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 

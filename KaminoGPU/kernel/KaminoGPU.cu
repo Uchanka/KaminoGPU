@@ -13,13 +13,20 @@ Kamino::Kamino(fReal radius, size_t nTheta, fReal particleDensity,
 	gridPath(gridPath), particlePath(particlePath),
 	densityImage(densityImage), solidImage(solidImage), colorImage(colorImage)
 {
-	// stores BGR pixel values for an image
-	// all values initialized to WHITE
-	size_t size = nTheta * 2 * nTheta;
-	this->colorMap = new vec3[size];
-	for (int i = 0; i < size; ++i) {
-		colorMap[i] = vec3(128.0, 128.0, 128.0);
-	}
+	size_t constantHostIntVars[2];
+	fReal constantHostRealVars[3];
+
+	constantHostIntVars[nThetaIdx] = nTheta;
+	constantHostIntVars[nPhiIdx] = nPhi;
+
+	constantHostRealVars[radiusIdx] = radius;
+	constantHostRealVars[timeStepIdx] = dt;
+	constantHostRealVars[gridLenIdx] = gridLen;
+
+	checkCudaErrors(cudaMemcpyToSymbol(constantIntVars, constantHostIntVars,
+		2 * sizeof(size_t), 0, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpyToSymbol(constantRealVars, constantHostRealVars,
+		3 * sizeof(fReal), 0, cudaMemcpyHostToDevice));
 }
 
 Kamino::~Kamino()

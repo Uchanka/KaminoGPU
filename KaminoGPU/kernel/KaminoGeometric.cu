@@ -73,50 +73,20 @@ __device__ fReal solveCubic(fReal a, fReal b, fReal c)
 	}
 }
 
-__global__ void geometricKernel
-(fReal* velPhiOutput, fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
-	size_t nPhiPitchInElements, size_t nThetaPitchInElements,
-	fReal gridLen, fReal radius, fReal timeStep)
-{
-	int thetaIndex = blockIdx.x;
-	int phiIndex = threadIdx.x;
-
-	fReal thetaValue = ((fReal)thetaIndex + vPhiThetaOffset) * gridLen;
-
-	int uPhiIndex = (thetaIndex + 1) * nPhiPitchInElements + phiIndex;
-	int vThetaIndex = thetaIndex * nThetaPitchInElements + phiIndex;
-	fReal uPhiPrev = velPhiInput[uPhiIndex];
-	fReal vThetaPrev = velThetaInput[vThetaIndex];
-
-	fReal G = timeStep * cosf(thetaValue) / (radius * sinf(thetaValue));
-	fReal coef = 1.0 / (G * G);
-	fReal A = 0.0;
-	fReal B = (G * vThetaPrev + 1.0) * coef;
-	fReal C = -uPhiPrev * coef;
-
-	fReal uPhiNext = solveCubic(A, B, C);
-	fReal vThetaNext = vThetaPrev + G * uPhiNext * uPhiNext;
-
-	velPhiOutput[uPhiIndex] = uPhiNext;
-	velThetaOutput[vThetaIndex] = vThetaNext;
-}
-
 __global__ void geometricPhiKernel
-(fReal* velPhiOutput,
-	size_t nPhi, size_t nTheta, size_t nPitchInElements,
-	fReal gridLen, fReal radius, fReal timeStep)
+(fReal* velPhiOutput, size_t nPitchInElements)
 {
 	// Index
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
+	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
 	// The factor
-	fReal factor = timeStep * cosf(gTheta) / (radius * sinf(gTheta));
+	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
 
 	// Coord in u-v texture space
-	fReal gPhiTex = (fReal)phiId / nPhi;
-	fReal gThetaTex = (fReal)thetaId / nTheta;
+	fReal gPhiTex = (fReal)phiId / nPhiGlobal;
+	fReal gThetaTex = (fReal)thetaId / nThetaGlobal;
 
 	// Sample the speed
 	fReal guPhi = tex2D(texGeoVelPhi, gPhiTex, gThetaTex);
@@ -128,21 +98,19 @@ __global__ void geometricPhiKernel
 };
 
 __global__ void geometricThetaKernel
-(fReal* velThetaOutput,
-	size_t nPhi, size_t nTheta, size_t nPitchInElements,
-	fReal gridLen, fReal radius, fReal timeStep)
+(fReal* velThetaOutput, size_t nPitchInElements)
 {
 	// Index
 	int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
+	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;
 	// The factor
-	fReal factor = timeStep * cosf(gTheta) / (radius * sinf(gTheta));
+	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
 
 	// Coord in u-v texture space
-	fReal gPhiTex = (fReal)phiId / nPhi;
-	fReal gThetaTex = (fReal)thetaId / nTheta;
+	fReal gPhiTex = (fReal)phiId / nPhiGlobal;
+	fReal gThetaTex = (fReal)thetaId / nThetaGlobal;
 
 	// Sample the speed
 	fReal guPhi = tex2D(texGeoVelPhi, gPhiTex, gThetaTex);
@@ -165,18 +133,14 @@ void KaminoSolver::geometric()
 	dim3 gridLayout = dim3(nTheta - 1);
 	dim3 blockLayout = dim3(nPhi);
 	geometricPhiKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(),
-		nPhi, nTheta, velPhi->getNextStepPitch() / sizeof(fReal),
-		gridLen, radius, timeStep);
+	(velPhi->getGPUNextStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
 
 	geometricThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(), 
-		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
-		gridLen, radius, timeStep);
+	(velTheta->getGPUNextStep(), velTheta->getNextStepPitchInElements());
 
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
