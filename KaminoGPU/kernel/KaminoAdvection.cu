@@ -26,28 +26,26 @@ __device__ fReal validateTex(fReal& phiTex, fReal& thetaTex)
 }
 
 __global__ void advectionVPhiKernel
-	(fReal* attributeOutput,
-	size_t nTheta, size_t nPhi, size_t nPitchInElements,
-	fReal gridLen, fReal radius, fReal timeStep)
+	(fReal* attributeOutput, size_t nPitchInElements)
 {
 	// Index
     int phiId = threadIdx.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
-	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLen;
-	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
+	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLenGlobal;
+	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
 	
 	// Coord in u-v texture space
-	fReal gPhiTex = (gPhi - vPhiPhiOffset * gridLen) / vPhiPhiNorm;
-	fReal gThetaTex = (gTheta - vPhiThetaOffset * gridLen) / vPhiThetaNorm;
+	fReal gPhiTex = (gPhi - vPhiPhiOffset * gridLenGlobal) / vPhiPhiNorm;
+	fReal gThetaTex = (gTheta - vPhiThetaOffset * gridLenGlobal) / vPhiThetaNorm;
 
 	// Sample the speed
 	fReal guPhi = tex2D<fReal>(texAdvVelPhi, gPhiTex, gThetaTex);
 	fReal guTheta = tex2D<fReal>(texAdvVelTheta, gPhiTex, gThetaTex);
 
-	fReal latRadius = radius * sinf(gTheta);
-	fReal cofPhi = timeStep / latRadius;
-	fReal cofTheta = timeStep / radius;
+	fReal latRadius = radiusGlobal * sinf(gTheta);
+	fReal cofPhi = timeStepGlobal / latRadius;
+	fReal cofTheta = timeStepGlobal / radiusGlobal;
 
 	fReal deltaPhi = guPhi * cofPhi;
 	fReal deltaTheta = guTheta * cofTheta;

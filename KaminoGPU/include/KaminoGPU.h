@@ -36,15 +36,6 @@ private:
 
 	vec3* colorMap;
 
-	/* initialize density field in solver */
-	void initializeDensity(KaminoQuantity* d);
-	/* define the locations of SOLID and FLUID grid cells */
-	void defineCellTypes(gridType* g);
-	/* load color image for particle color initialization */
-	void loadColorImage();
-
-	//size_t getIndex(size_t x, size_t y);
-
 public:
 	Kamino(fReal radius = 5.0, size_t nTheta = 128, fReal particleDensity = 200.0,
 		float dt = 0.005, float DT = 1.0 / 24.0, int frames = 1000,

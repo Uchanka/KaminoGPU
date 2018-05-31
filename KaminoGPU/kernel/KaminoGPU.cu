@@ -1,4 +1,5 @@
 # include "../include/KaminoGPU.h"
+# define WRITE_BGEO
 
 Kamino::Kamino(fReal radius, size_t nTheta, fReal particleDensity,
 	float dt, float DT, int frames,
@@ -19,12 +20,6 @@ Kamino::Kamino(fReal radius, size_t nTheta, fReal particleDensity,
 	for (int i = 0; i < size; ++i) {
 		colorMap[i] = vec3(128.0, 128.0, 128.0);
 	}
-
-# ifdef OMParallelize
-	omp_set_num_threads(TOTALThreads);
-	Eigen::setNbThreads(TOTALThreads);
-# endif
-
 }
 
 Kamino::~Kamino()
@@ -35,7 +30,9 @@ void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
 	
+# ifdef WRITE_BGEO
 	solver.write_data_bgeo(gridPath, 0);
+# endif
 
 	float T = 0.0;              // simulation time
 	for (int i = 1; i <= frames; i++) 
@@ -49,6 +46,8 @@ void Kamino::run()
 		T = i*DT;
 
 		std::cout << "Frame " << i << " is ready" << std::endl;
+# ifdef WRITE_BGEO
 		solver.write_data_bgeo(gridPath, i);
+# endif
 	}
 }

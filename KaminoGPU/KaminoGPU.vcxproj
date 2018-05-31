@@ -103,8 +103,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\vectorUtil.cpp" />
-    <ClCompile Include="src\CubicSolver.cpp" />
-    <ClCompile Include="src\KaminoParticles.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

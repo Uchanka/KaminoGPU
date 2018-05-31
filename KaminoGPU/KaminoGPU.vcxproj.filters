@@ -32,12 +32,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\CubicSolver.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\KaminoParticles.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\vectorUtil.cpp">
       <Filter>src</Filter>
     </ClCompile>

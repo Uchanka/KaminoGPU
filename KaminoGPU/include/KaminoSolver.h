@@ -64,7 +64,6 @@ private:
 	void advection();
 	void geometric();
 	void projection();
-	void bodyForce();
 
 	// Swap all these buffers of the attributes.
 	void swapAttrBuffers();

@@ -56,6 +56,12 @@ const fReal density = 1000.0;
 const fReal uSolid = 0.0;
 const fReal vSolid = 0.0;
 
+size_t nThetaGlobal;
+size_t nPhiGlobal;
+fReal radiusGlobal;
+fReal timeStepGlobal;
+fReal gridLenGlobal;
+
 enum gridType { FLUIDGRID, SOLIDGRID };
 
 enum Coord { phi, theta };
