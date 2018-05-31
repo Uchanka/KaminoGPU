@@ -4,6 +4,11 @@
 static table2D texProjVelTheta;
 static table2D texProjPressure;*/
 
+fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)
+{
+	return (1.0 - alpha) * from + alpha * to;
+}
+
 __global__ void crKernel(fReal *d_a, fReal *d_b, fReal *d_c, fReal *d_d, fReal *d_x);
 
 //nTheta blocks, nPhi threads
@@ -261,15 +266,12 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaDeviceSynchronize());
 
 	swapAttrBuffers();
-
-	solveForPolarVelocities();
 }
 
 void KaminoSolver::solveForPolarVelocities()
 {
-	copyVelocityBack2CPU();
-	fReal* u = velPhi->getGPUThisStep();
-	fReal* v = velTheta->getGPUThisStep();
+	fReal* u = velPhi->getCPUBuffer();
+	fReal* v = velTheta->getCPUBuffer();
 
 	size_t northernBelt = 0;
 	size_t northernBeltp1 = northernBelt + 1;
@@ -287,18 +289,18 @@ void KaminoSolver::solveForPolarVelocities()
 		fReal phi = (M_2PI / nPhi) * gridPhi;
 
 		size_t gridPhiP1 = (gridPhi + 1) % nPhi;
-		fReal ootBeltUPhi = kaminoLerp(u[northernBelt * nPhi + gridPhi], u[northernBelt * nPhi + gridPhiP1], 0.5);
-		fReal totBeltUPhi = kaminoLerp(u[northernBeltp1 * nPhi + gridPhi], u[northernBeltp1 * nPhi + gridPhiP1], 0.5);
-		fReal uPhiLatLine = kaminoLerp(ootBeltUPhi, totBeltUPhi, 0.5);
+		fReal ootBeltUPhi = kaminoLerpHost(u[northernBelt * nPhi + gridPhi], u[northernBelt * nPhi + gridPhiP1], 0.5);
+		fReal totBeltUPhi = kaminoLerpHost(u[northernBeltp1 * nPhi + gridPhi], u[northernBeltp1 * nPhi + gridPhiP1], 0.5);
+		fReal uPhiLatLine = kaminoLerpHost(ootBeltUPhi, totBeltUPhi, 0.5);
 		fReal uThetaLatLine = v[(northernPinch + 1) * nPhi + gridPhi];
 
 		uNorthP[x] += uThetaLatLine * std::cos(phi) - uPhiLatLine * std::sin(phi);
 		uNorthP[y] += uThetaLatLine * std::sin(phi) + uPhiLatLine * std::cos(phi);
 
 
-		ootBeltUPhi = kaminoLerp(u[southernBelt * nPhi + gridPhi], u[southernBelt * nPhi + gridPhiP1], 0.5);
-		totBeltUPhi = kaminoLerp(u[southernBeltm1 * nPhi + gridPhi], u[southernBeltm1 * nPhi + gridPhiP1], 0.5);
-		uPhiLatLine = kaminoLerp(ootBeltUPhi, totBeltUPhi, 0.5);
+		ootBeltUPhi = kaminoLerpHost(u[southernBelt * nPhi + gridPhi], u[southernBelt * nPhi + gridPhiP1], 0.5);
+		totBeltUPhi = kaminoLerpHost(u[southernBeltm1 * nPhi + gridPhi], u[southernBeltm1 * nPhi + gridPhiP1], 0.5);
+		uPhiLatLine = kaminoLerpHost(ootBeltUPhi, totBeltUPhi, 0.5);
 		uThetaLatLine = v[(southernPinch - 1) * nPhi + gridPhi];
 
 		uSouthP[x] += -uThetaLatLine * std::cos(phi) - uPhiLatLine * std::sin(phi);

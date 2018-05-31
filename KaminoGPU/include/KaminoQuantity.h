@@ -63,6 +63,8 @@ public:
 	/* Access */
 	fReal& accessCPUValueAt(size_t x, size_t y);
 	/* Get the offset */
+	fReal* getCPUBuffer();
+
 	fReal getPhiOffset();
 	fReal getThetaOffset();
 	fReal* getGPUThisStep();

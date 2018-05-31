@@ -78,6 +78,11 @@ fReal KaminoQuantity::getCPUValueAt(size_t phi, size_t theta)
 	return this->accessCPUValueAt(phi, theta);
 }
 
+fReal* KaminoQuantity::getCPUBuffer()
+{
+	return this->cpuBuffer;
+}
+
 void KaminoQuantity::setCPUValueAt(size_t phi, size_t theta, fReal val)
 {
 	this->accessCPUValueAt(phi, theta) = val;

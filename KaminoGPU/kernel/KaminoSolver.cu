@@ -78,29 +78,6 @@ KaminoSolver::~KaminoSolver()
 	checkCudaErrors(cudaDeviceReset());
 }
 
-// Phi: 0 - 2pi  Theta: 0 - pi
-__device__ bool validatePhiTheta(fReal &phi, fReal &theta)
-{
-	int loops = static_cast<int>(std::floorf(theta / M_2PI));
-	theta = theta - loops * M_2PI;
-	// Now theta is in 0-2pi range
-
-	bool isFlipped = false;
-
-	if (theta > M_PI)
-	{
-		theta = M_2PI - theta;
-		phi += M_PI;
-		isFlipped = true;
-	}
-
-	loops = static_cast<int>(std::floorf(phi / M_2PI));
-	phi = phi - loops * M_2PI;
-	// Now phi is in 0-2pi range
-
-	return isFlipped;
-}
-
 /*void KaminoSolver::setTextureParams(table2D* tex)
 {
 	tex->addressMode[0] = cudaAddressModeWrap;
@@ -178,9 +155,12 @@ void KaminoSolver::stepForward(fReal timeStep)
 	//std::cout << "Geometric completed" << std::endl;
 	//bodyForce();
 	//std::cout << "Body force application completed" << std::endl;
-	projection();
+	//projection();
 	//std::cout << "Projection completed" << std::endl;
 	this->timeElapsed += timeStep;
+
+	copyVelocityBack2CPU();
+	solveForPolarVelocities();
 }
 
 void KaminoSolver::bodyForce()

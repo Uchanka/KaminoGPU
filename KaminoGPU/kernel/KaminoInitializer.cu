@@ -53,7 +53,7 @@ void KaminoSolver::initialize_velocity()
 	}
 
 	// set u_theta initial values using FBM curl noise
-	for (size_t j = 0; j < v->getNTheta(); ++j)
+	for (size_t j = 1; j < v->getNTheta() - 1; ++j)
 	{
 		for (size_t i = 0; i < v->getNPhi(); ++i)
 		{
@@ -77,6 +77,7 @@ void KaminoSolver::initialize_velocity()
 			v->setCPUValueAt(i, j, avgNoise);
 		}
 	}
+	solveForPolarVelocities();
 }
 
 fReal KaminoSolver::FBM(const fReal x, const fReal y) {
@@ -92,11 +93,6 @@ fReal KaminoSolver::FBM(const fReal x, const fReal y) {
 	}
 
 	return 10.0 * total;
-}
-
-fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)
-{
-	return (1.0 - alpha) * from + alpha * to;
 }
 
 fReal KaminoSolver::interpNoise2D(const fReal x, const fReal y) const
