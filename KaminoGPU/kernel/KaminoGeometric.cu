@@ -101,8 +101,8 @@ __global__ void geometricKernel
 	velThetaOutput[vThetaIndex] = vThetaNext;
 }
 
-/*__global__ void geometricPhiKernel
-(fReal* velPhiOutput, fReal* velPhiInput,
+__global__ void geometricPhiKernel
+(fReal* velPhiOutput,
 	size_t nPhi, size_t nTheta, size_t nPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
@@ -124,11 +124,11 @@ __global__ void geometricKernel
 
 	fReal updateduPhi = guPhi - factor * guPhi * gTheta;
 
-	attributeOutput[thetaId * nPitchInElements + phiId] = updateduPhi;
+	velPhiOutput[thetaId * nPitchInElements + phiId] = updateduPhi;
 };
 
 __global__ void geometricThetaKernel
-(fReal* velThetaOutput, fReal* velThetaInput,
+(fReal* velThetaOutput,
 	size_t nPhi, size_t nTheta, size_t nPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
@@ -150,25 +150,31 @@ __global__ void geometricThetaKernel
 
 	fReal updateduTheta = guTheta + factor * guPhi * guPhi;
 
-	attributeOutput[thetaId * nPitchInElements + phiId] = updateduTheta;
-};*/
+	velThetaOutput[thetaId * nPitchInElements + phiId] = updateduTheta;
+}
 
 void KaminoSolver::geometric()
 {
+	setTextureParams(&texGeoVelPhi);
+	setTextureParams(&texGeoVelTheta);
+	velPhi->bindTexture(&texGeoVelPhi);
+	velTheta->bindTexture(&texGeoVelTheta);
+
 	dim3 gridLayout = dim3(nTheta - 1);
 	dim3 blockLayout = dim3(nPhi);
-	geometricKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
-		velPhi->getNextStepPitch() / sizeof(fReal), velTheta->getNextStepPitch() / sizeof(fReal),
+	geometricPhiKernel<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(),
+		nPhi, nTheta, velPhi->getNextStepPitch() / sizeof(fReal),
 		gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 
-	/*geometricThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(),
+	geometricThetaKernel<<<gridLayout, blockLayout>>>
+	(velTheta->getGPUNextStep(), 
 		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
 		gridLen, radius, timeStep);
-	checkCudaErrors(cudaGetLastError());*/
 
+	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	swapAttrBuffers();
 }
