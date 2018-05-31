@@ -61,3 +61,5 @@ enum gridType { FLUIDGRID, SOLIDGRID };
 enum Coord { phi, theta };
 
 __device__ bool validatePhiTheta(fReal& phi, fReal& theta);
+fReal kaminoLerpHost(fReal from, fReal to, fReal alpha);
+__device__ fReal kaminoLerp(fReal from, fReal to, fReal alpha);

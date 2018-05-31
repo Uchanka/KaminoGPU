@@ -1,7 +1,7 @@
 # include "../include/KaminoSolver.h"
 
-static table2D texGeoVelPhi;
-static table2D texGeoVelTheta;
+/*static table2D texGeoVelPhi;
+static table2D texGeoVelTheta;*/
 
 __device__ fReal _root3(fReal x)
 {
@@ -73,8 +73,9 @@ __device__ fReal solveCubic(fReal a, fReal b, fReal c)
 	}
 }
 
-__global__ void geometricKernel
-(fReal* velPhiOutput, fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
+//nTheta blocks, nPhi threads
+__global__ void geometricPhiKernel
+(fReal* velPhiOutput, fReal* velPhiInput, fReal* velThetaInput,
 	size_t nPhiPitchInElements, size_t nThetaPitchInElements,
 	fReal gridLen, fReal radius, fReal timeStep)
 {
@@ -83,10 +84,11 @@ __global__ void geometricKernel
 
 	fReal thetaValue = ((fReal)thetaIndex + vPhiThetaOffset) * gridLen;
 
-	int uPhiIndex = (thetaIndex + 1) * nPhiPitchInElements + phiIndex;
+	int uPhiIndex = thetaIndex * nPhiPitchInElements + phiIndex;
 	int vThetaIndex = thetaIndex * nThetaPitchInElements + phiIndex;
 	fReal uPhiPrev = velPhiInput[uPhiIndex];
-	fReal vThetaPrev = velThetaInput[vThetaIndex];
+	fReal vThetaPrev = 0.5 * (velThetaInput[vThetaIndex]
+		+ velThetaInput[vThetaIndex + nThetaPitchInElements]);
 
 	fReal G = timeStep * cosf(thetaValue) / (radius * sinf(thetaValue));
 	fReal coef = 1.0 / (G * G);
@@ -95,9 +97,30 @@ __global__ void geometricKernel
 	fReal C = -uPhiPrev * coef;
 
 	fReal uPhiNext = solveCubic(A, B, C);
-	fReal vThetaNext = vThetaPrev + G * uPhiNext * uPhiNext;
 
 	velPhiOutput[uPhiIndex] = uPhiNext;
+}
+
+//nTheta - 1 blocks, nPhi threads
+__global__ void geometricThetaKernel
+(fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
+	size_t nPhiPitchInElements, size_t nThetaPitchInElements,
+	fReal gridLen, fReal radius, fReal timeStep)
+{
+	int thetaIndex = blockIdx.x + 1;
+	int phiIndex = threadIdx.x;
+
+	fReal thetaValue = ((fReal)thetaIndex + vThetaThetaOffset) * gridLen;
+
+	int uPhiIndex = thetaIndex * nPhiPitchInElements + phiIndex;
+	int vThetaIndex = thetaIndex * nThetaPitchInElements + phiIndex;
+	fReal vThetaPrev = velThetaInput[vThetaIndex];
+	fReal uPhiNext = velPhiInput[uPhiIndex];
+
+	fReal G = timeStep * cosf(thetaValue) / (radius * sinf(thetaValue));
+
+	fReal vThetaNext = vThetaPrev + G * uPhiNext * uPhiNext;
+
 	velThetaOutput[vThetaIndex] = vThetaNext;
 }
 
@@ -155,20 +178,25 @@ __global__ void geometricThetaKernel
 
 void KaminoSolver::geometric()
 {
-	dim3 gridLayout = dim3(nTheta - 1);
+	dim3 gridLayout = dim3(nTheta);
 	dim3 blockLayout = dim3(nPhi);
-	geometricKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
+	geometricPhiKernel<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
 		velPhi->getNextStepPitch() / sizeof(fReal), velTheta->getNextStepPitch() / sizeof(fReal),
 		gridLen, radius, timeStep);
 	checkCudaErrors(cudaGetLastError());
-
-	/*geometricThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(),
-		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
-		gridLen, radius, timeStep);
-	checkCudaErrors(cudaGetLastError());*/
-
 	checkCudaErrors(cudaDeviceSynchronize());
-	swapAttrBuffers();
+
+	velPhi->swapGPUBuffer();
+
+	gridLayout = dim3(nTheta - 1);
+	blockLayout = dim3(nPhi);
+	geometricThetaKernel<<<gridLayout, blockLayout>>>
+		(velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
+			velPhi->getNextStepPitch() / sizeof(fReal), velTheta->getNextStepPitch() / sizeof(fReal),
+			gridLen, radius, timeStep);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	velTheta->swapGPUBuffer();
 }
