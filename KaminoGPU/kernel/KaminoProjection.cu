@@ -16,7 +16,7 @@ __global__ void fillDivergenceKernel
 (ComplexFourier* outputF, fReal* velPhi, fReal* velTheta,
 	size_t velPhiPitchInElements, size_t velThetaPitchInElements)
 {
-	int gridPhiId = threadIdx.x;
+	int gridPhiId = threadIdx.x + threadIdx.y * blockDim.x;
 	int gridThetaId = blockIdx.x;
 	//fReal gridPhiCoord = ((fReal)gridPhiId + centeredPhiOffset) * gridLen;
 	fReal gridThetaCoord = ((fReal)gridThetaId + centeredThetaOffset) * gridLenGlobal;
@@ -66,7 +66,7 @@ __global__ void fillDivergenceKernel
 __global__ void shiftFKernel
 (ComplexFourier* FFourierInput, fReal* FFourierShiftedReal, fReal* FFourierShiftedImag)
 {
-	int nIdx = threadIdx.x;
+	int nIdx = threadIdx.x + threadIdx.y * blockIdx.x;
 	int thetaIdx = blockIdx.x;
 	int fftIndex = nPhiGlobal / 2 - nIdx;
 	if (fftIndex < 0)
@@ -81,7 +81,7 @@ __global__ void shiftFKernel
 __global__ void copy2UFourier
 (ComplexFourier* UFourierOutput, fReal* UFourierReal, fReal* UFourierImag)
 {
-	int nIdx = threadIdx.x;
+	int nIdx = threadIdx.x + threadIdx.y * blockIdx.x;;
 	int thetaIdx = blockIdx.x;
 	ComplexFourier u;
 	u.x = UFourierReal[nIdx * nThetaGlobal + thetaIdx];
@@ -92,7 +92,7 @@ __global__ void copy2UFourier
 __global__ void cacheZeroComponents
 (fReal* zeroComponentCache, ComplexFourier* input)
 {
-	int thetaIdx = threadIdx.x;
+	int thetaIdx = threadIdx.x + threadIdx.y * blockIdx.x;;
 	zeroComponentCache[thetaIdx] = input[thetaIdx * nPhiGlobal + nPhiGlobal / 2].x;
 }
 
@@ -100,7 +100,7 @@ __global__ void shiftUKernel
 (ComplexFourier* UFourierInput, fReal* pressure, fReal* zeroComponentCache,
 	size_t nPressurePitchInElements)
 {
-	int phiIdx = threadIdx.x;
+	int phiIdx = threadIdx.x + threadIdx.y * blockIdx.x;;
 	int thetaIdx = blockIdx.x;
 	int fftIndex = 0;
 	fReal zeroComponent = zeroComponentCache[thetaIdx];
@@ -120,7 +120,7 @@ __global__ void applyPressureTheta
 (fReal* output, fReal* prev, fReal* pressure,
 	size_t nPitchInElementsPressure, size_t nPitchInElementsVTheta)
 {
-	int phiId = threadIdx.x;
+	int phiId = threadIdx.x + threadIdx.y * blockIdx.x;;
 	int thetaId = blockIdx.x;
 
 	int pressureThetaNorthId = thetaId;
@@ -136,7 +136,7 @@ __global__ void applyPressurePhi
 (fReal* output, fReal* prev, fReal* pressure,
 	size_t nPitchInElementsPressure, size_t nPitchInElementsVPhi)
 {
-	int phiId = threadIdx.x;
+	int phiId = threadIdx.x + threadIdx.y * blockIdx.x;;
 	int thetaId = blockIdx.x;
 
 	int pressurePhiWestId;
@@ -166,7 +166,11 @@ void KaminoSolver::projection()
 
 
 	dim3 gridLayout(nTheta);
-	dim3 blockLayout(nPhi);
+	dim3 blockLayout = dim3(nPhi);
+	if (nPhi > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
+	}
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
 	(this->gpuFFourier, this->velPhi->getGPUThisStep(), this->velTheta->getGPUThisStep(),
 		this->velPhi->getThisStepPitchInElements(), this->velTheta->getThisStepPitchInElements());
@@ -185,6 +189,10 @@ void KaminoSolver::projection()
 	// Siglen is nPhi
 	gridLayout = dim3(nTheta);
 	blockLayout = dim3(nPhi);
+	if (nPhi > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
+	}
 	shiftFKernel<<<gridLayout, blockLayout>>>
 	(gpuFFourier, gpuFReal, gpuFImag);
 	checkCudaErrors(cudaGetLastError());
@@ -212,6 +220,10 @@ void KaminoSolver::projection()
 
 	gridLayout = dim3(nTheta);
 	blockLayout = dim3(nPhi);
+	if (nPhi > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
+	}
 	copy2UFourier<<<gridLayout, blockLayout>>>
 	(this->gpuUFourier, this->gpuUReal, this->gpuUImag);
 	checkCudaErrors(cudaGetLastError());
@@ -221,6 +233,10 @@ void KaminoSolver::projection()
 
 	gridLayout = dim3(1);
 	blockLayout = dim3(nTheta);
+	if (nTheta > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nTheta + nThreadxMax - 1) / nThreadxMax);
+	}
 	cacheZeroComponents<<<gridLayout, blockLayout>>>
 	(gpuFZeroComponent, gpuUFourier);
 	checkCudaErrors(cudaGetLastError());
@@ -236,6 +252,10 @@ void KaminoSolver::projection()
 
 	gridLayout = dim3(nTheta);
 	blockLayout = dim3(nPhi);
+	if (nPhi > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
+	}
 	shiftUKernel<<<gridLayout, blockLayout>>>
 	(gpuUFourier, pressure->getGPUThisStep(), this->gpuFZeroComponent,
 		pressure->getThisStepPitchInElements());
@@ -246,6 +266,10 @@ void KaminoSolver::projection()
 
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
+	if (velTheta->getNPhi() > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (velTheta->getNPhi() + nThreadxMax - 1) / nThreadxMax);
+	}
 	applyPressureTheta<<<gridLayout, blockLayout>>>
 		(velTheta->getGPUNextStep(), velTheta->getGPUThisStep(), pressure->getGPUThisStep(),
 			pressure->getThisStepPitchInElements(), velTheta->getNextStepPitchInElements());
@@ -254,6 +278,10 @@ void KaminoSolver::projection()
 
 	gridLayout = dim3(velPhi->getNTheta());
 	blockLayout = dim3(velPhi->getNPhi());
+	if (velPhi->getNPhi() > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (velPhi->getNPhi() + nThreadxMax - 1) / nThreadxMax);
+	}
 	applyPressurePhi<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), pressure->getGPUThisStep(),
 		pressure->getThisStepPitchInElements(), velPhi->getNextStepPitchInElements());

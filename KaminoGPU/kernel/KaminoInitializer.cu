@@ -2,6 +2,7 @@
 
 void KaminoSolver::initialize_velocity()
 {
+	std::cout << "Initializing velocity..." << std::endl;
 	KaminoQuantity* u = this->velPhi;
 	KaminoQuantity* v = this->velTheta;
 
@@ -91,7 +92,7 @@ fReal KaminoSolver::FBM(const fReal x, const fReal y) {
 		total += amp * interpNoise2D(x * freq / resolution, y * freq / resolution);
 	}
 
-	return 20.0 * total;
+	return 2560 * total / nTheta;
 }
 
 fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)

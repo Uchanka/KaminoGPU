@@ -83,7 +83,7 @@ __global__ void geometricPhiKernel
 (fReal* velPhiOutput, size_t nPitchInElements)
 {
 	// Index
-	int phiId = threadIdx.x;
+	int phiId = threadIdx.x + threadIdx.y * blockDim.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
 	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
@@ -107,7 +107,7 @@ __global__ void geometricThetaKernel
 (fReal* velThetaOutput, size_t nPitchInElements)
 {
 	// Index
-	int phiId = threadIdx.x;
+	int phiId = threadIdx.x + threadIdx.y * blockDim.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
 	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;
@@ -146,6 +146,10 @@ void KaminoSolver::geometric()
 
 	dim3 gridLayout = dim3(nTheta - 1);
 	dim3 blockLayout = dim3(nPhi);
+	if (nPhi > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
+	}
 	geometricPhiKernel<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());

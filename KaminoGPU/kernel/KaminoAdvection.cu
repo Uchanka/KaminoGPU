@@ -35,7 +35,7 @@ __global__ void advectionVPhiKernel
 	(fReal* attributeOutput, size_t nPitchInElements)
 {
 	// Index
-    int phiId = threadIdx.x;
+    int phiId = threadIdx.x + threadIdx.y * blockDim.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
 	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLenGlobal;
@@ -86,7 +86,7 @@ __global__ void advectionVThetaKernel
 (fReal* attributeOutput, size_t nPitchInElements)
 {
 	// Index
-	int phiId = threadIdx.x;
+	int phiId = threadIdx.x + threadIdx.y * blockDim.x;
 	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
 	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLenGlobal;
@@ -238,6 +238,10 @@ void KaminoSolver::advection()
 	// Advect Phi
 	dim3 gridLayout = dim3(velPhi->getNTheta());
 	dim3 blockLayout = dim3(velPhi->getNPhi());
+	if (velPhi->getNPhi() > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (velPhi->getNPhi() + nThreadxMax - 1) / nThreadxMax);
+	}
 	advectionVPhiKernel<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
@@ -247,6 +251,10 @@ void KaminoSolver::advection()
 	
 	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
+	if (velTheta->getNPhi() > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (velTheta->getNPhi() + nThreadxMax - 1) / nThreadxMax);
+	}
 	advectionVThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), velTheta->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());

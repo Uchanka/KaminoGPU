@@ -10,8 +10,13 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 	timeStep(0.0), timeElapsed(0.0),
 	A(A), B(B), C(C), D(D), E(E)
 {
+	/// FIXME: Should we detect and use device 0?
 	/// Replace it later with functions from helper_cuda.h!
 	checkCudaErrors(cudaSetDevice(0));
+
+	cudaDeviceProp deviceProp;
+	checkCudaErrors(cudaGetDeviceProperties(&deviceProp, 0));
+	this->nThreadxMax = deviceProp.maxThreadsDim[0];
 
 	checkCudaErrors(cudaMalloc((void **)&gpuUFourier,
 		sizeof(ComplexFourier) * nPhi * nTheta));
@@ -96,7 +101,7 @@ __global__ void precomputeABCKernel
 {
 	int nIndex = blockIdx.x;
 	int n = nIndex - nPhi / 2;
-	int i = threadIdx.x;
+	int i = threadIdx.x + threadIdx.y * blockDim.x;
 	int index = nIndex * nTheta + i;
 	fReal thetaI = (i + centeredThetaOffset) * gridLen;
 
@@ -138,7 +143,12 @@ __global__ void precomputeABCKernel
 void KaminoSolver::precomputeABCCoef()
 {
 	dim3 gridLayout = dim3(nPhi);
+	size_t blockYDim = 1;
 	dim3 blockLayout = dim3(nTheta);
+	if (nTheta > nThreadxMax)
+	{
+		blockLayout = dim3(nThreadxMax, (nTheta + nThreadxMax - 1) / nThreadxMax);
+	}
 	precomputeABCKernel<<<gridLayout, blockLayout>>>
 	(this->gpuA, this->gpuB, this->gpuC, gridLen, nPhi, nTheta);
 	checkCudaErrors(cudaGetLastError());

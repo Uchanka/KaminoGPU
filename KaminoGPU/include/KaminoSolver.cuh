@@ -34,6 +34,8 @@ private:
 	/* Grid dimensions */
 	size_t nPhi;
 	size_t nTheta;
+	/* Cuda dimensions */
+	size_t nThreadxMax;
 	/* Radius of sphere */
 	fReal radius;
 	/* Grid size */
