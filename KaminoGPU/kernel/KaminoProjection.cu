@@ -241,7 +241,7 @@ void KaminoSolver::projection()
 
 	//pressure->copyBackToCPU();
 
-	gridLayout = dim3(velTheta->getNTheta() - 1);
+	gridLayout = dim3(velTheta->getNTheta());
 	blockLayout = dim3(velTheta->getNPhi());
 	applyPressureTheta<<<gridLayout, blockLayout>>>
 		(velTheta->getGPUNextStep(), velTheta->getGPUThisStep(), pressure->getGPUThisStep(), pressure->getThisStepPitch() / sizeof(fReal),
