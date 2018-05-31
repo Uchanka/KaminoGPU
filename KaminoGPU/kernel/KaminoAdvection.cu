@@ -8,10 +8,11 @@ __device__ fReal kaminoLerp(fReal from, fReal to, fReal alpha)
 	return (1.0 - alpha) * from + alpha * to;
 }
 
-
 // Phi: 0 - 2pi  Theta: 0 - pi
-__device__ void validatePhiTheta(fReal &phi, fReal &theta)
+__device__ fReal validatePhiTheta(fReal &phi, fReal &theta)
 {
+	fReal bit = 1.0;
+
 	int loops = (int)(floorf(theta / M_2PI));
 	theta = theta - loops * M_2PI;
 	// Now theta is in 0-2pi range
@@ -19,11 +20,14 @@ __device__ void validatePhiTheta(fReal &phi, fReal &theta)
 	{
 		theta = M_2PI - theta;
 		phi += M_PI;
+		bit = -bit;
 	}
+
 	loops = (int)(floorf(phi / M_2PI));
 	phi = phi - loops * M_2PI;
-}
 
+	return bit;
+}
 
 __device__ fReal sampleVPhiAt(fReal* vPhi, fReal rawPhi, fReal rawTheta,
 	size_t nPhi, size_t nTheta, size_t nPitchInElements,
@@ -32,7 +36,7 @@ __device__ fReal sampleVPhiAt(fReal* vPhi, fReal rawPhi, fReal rawTheta,
 	fReal phi = rawPhi - gridLen * vPhiPhiOffset;
 	fReal theta = rawTheta - gridLen * vPhiThetaOffset;
 
-	validatePhiTheta(phi, theta);
+	fReal val = validatePhiTheta(phi, theta);
 
 	fReal normedPhi = phi / gridLen;
 	fReal normedTheta = theta / gridLen;
@@ -56,7 +60,7 @@ __device__ fReal sampleVPhiAt(fReal* vPhi, fReal rawPhi, fReal rawTheta,
 
 	fReal lowerBelt = kaminoLerp(NW, NE, alphaPhi);
 	fReal higherBelt = kaminoLerp(SW, SE, alphaPhi);
-	return kaminoLerp(lowerBelt, higherBelt, alphaTheta);
+	return val * kaminoLerp(lowerBelt, higherBelt, alphaTheta);
 }
 
 __device__ fReal sampleVThetaAt(fReal* vTheta, fReal rawPhi, fReal rawTheta,
@@ -66,7 +70,7 @@ __device__ fReal sampleVThetaAt(fReal* vTheta, fReal rawPhi, fReal rawTheta,
 	fReal phi = rawPhi - gridLen * vThetaPhiOffset;
 	fReal theta = rawTheta - gridLen * vThetaThetaOffset;
 
-	validatePhiTheta(phi, theta);
+	fReal val = validatePhiTheta(phi, theta);
 
 	fReal normedPhi = phi / gridLen;
 	fReal normedTheta = theta / gridLen;
@@ -90,7 +94,7 @@ __device__ fReal sampleVThetaAt(fReal* vTheta, fReal rawPhi, fReal rawTheta,
 
 	fReal lowerBelt = kaminoLerp(NW, NE, alphaPhi);
 	fReal higherBelt = kaminoLerp(SW, SE, alphaPhi);
-	return kaminoLerp(lowerBelt, higherBelt, alphaTheta);
+	return val * kaminoLerp(lowerBelt, higherBelt, alphaTheta);
 }
 
 //nTheta blocks, nPhi threads
@@ -149,7 +153,7 @@ __global__ void advectionVThetaKernel
 {
 	// Index
 	int phiId = threadIdx.x;
-	int thetaId = blockIdx.x + 1;
+	int thetaId = blockIdx.x;
 	// Coord in phi-theta space
 	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLen;
 	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLen;
@@ -204,7 +208,7 @@ void KaminoSolver::advection()
 
 	// Advect Theta
 	
-	gridLayout = dim3(nTheta - 1);
+	gridLayout = dim3(nTheta + 1);
 	blockLayout = dim3(nPhi);
 	advectionVThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
