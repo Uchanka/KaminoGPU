@@ -239,7 +239,7 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	pressure->copyBackToCPU();
+	//pressure->copyBackToCPU();
 
 	gridLayout = dim3(velTheta->getNTheta() - 1);
 	blockLayout = dim3(velTheta->getNPhi());
