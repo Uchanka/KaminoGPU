@@ -79,7 +79,8 @@ void KaminoSolver::initialize_velocity()
 	}
 }
 
-fReal KaminoSolver::FBM(const fReal x, const fReal y) {
+fReal KaminoSolver::FBM(const fReal x, const fReal y)
+{
 	fReal total = 0.0f;
 	fReal resolution = 1.0;
 	fReal persistance = 0.5;

@@ -67,8 +67,8 @@ __global__ void advectionVThetaKernel
 	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLen;
 
 	// Coord in u-v texture space
-	fReal gPhiTex = (fReal)phiId / nPhi;
-	fReal gThetaTex = (fReal)thetaId / nTheta;
+	fReal gPhiTex = (gPhi - vThetaPhiOffset * gridLen) / vThetaPhiNorm;
+	fReal gThetaTex = (gTheta - vThetaThetaOffset * gridLen) / vThetaThetaNorm;
 
 	// Sample the speed
 	fReal guPhi = tex2D<fReal>(texAdvVelPhi, gPhiTex, gThetaTex);
