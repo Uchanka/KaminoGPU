@@ -160,6 +160,8 @@ void KaminoSolver::geometric()
 	velPhi->bindTexture(&texGeoVelPhi);
 	velTheta->bindTexture(&texGeoVelTheta);
 
+
+
 	dim3 gridLayout = dim3(nTheta - 1);
 	dim3 blockLayout = dim3(nPhi);
 	geometricPhiKernel<<<gridLayout, blockLayout>>>
@@ -169,6 +171,8 @@ void KaminoSolver::geometric()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
+
+
 	geometricThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), 
 		velTheta->getNPhi(), velTheta->getNTheta(), velTheta->getNextStepPitch() / sizeof(fReal),
@@ -176,5 +180,10 @@ void KaminoSolver::geometric()
 
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+
+
+
+	velPhi->unbindTexture(&texGeoVelPhi);
+	velTheta->unbindTexture(&texGeoVelTheta);
 	swapAttrBuffers();
 }
