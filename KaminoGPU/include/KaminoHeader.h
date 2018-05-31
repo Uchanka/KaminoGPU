@@ -60,4 +60,4 @@ enum gridType { FLUIDGRID, SOLIDGRID };
 
 enum Coord { phi, theta };
 
-bool validatePhiTheta(fReal& phi, fReal& theta);
+void validatePhiTheta(fReal& phi, fReal& theta);

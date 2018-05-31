@@ -131,6 +131,7 @@ __global__ void applyPressureTheta
 	fReal previousVTheta = prev[thetaId * nPitchInElementsVTheta + phiId];
 	output[thetaId * nPitchInElementsVTheta + phiId] = previousVTheta + deltaVTheta;
 }
+
 __global__ void applyPressurePhi
 (fReal* output, fReal* prev, fReal* pressure, size_t nPitchInElementsPressure,
 	size_t nPhi, size_t nTheta, size_t nPitchInElementsVPhi,
