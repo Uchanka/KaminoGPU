@@ -16,8 +16,10 @@ __global__ void fillDivergenceKernel
 (ComplexFourier* outputF, fReal* velPhi, fReal* velTheta,
 	size_t velPhiPitchInElements, size_t velThetaPitchInElements)
 {
-	int gridPhiId = threadIdx.x + threadIdx.y * blockDim.x;
-	int gridThetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int gridPhiId = threadIdx.x + threadSequence * blockDim.x;
+	int gridThetaId = blockIdx.x / splitVal;
 	//fReal gridPhiCoord = ((fReal)gridPhiId + centeredPhiOffset) * gridLen;
 	fReal gridThetaCoord = ((fReal)gridThetaId + centeredThetaOffset) * gridLenGlobal;
 
@@ -66,8 +68,11 @@ __global__ void fillDivergenceKernel
 __global__ void shiftFKernel
 (ComplexFourier* FFourierInput, fReal* FFourierShiftedReal, fReal* FFourierShiftedImag)
 {
-	int nIdx = threadIdx.x + threadIdx.y * blockIdx.x;
-	int thetaIdx = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int nIdx = threadIdx.x + threadSequence * blockDim.x;
+	int thetaIdx = blockIdx.x / splitVal;
+
 	int fftIndex = nPhiGlobal / 2 - nIdx;
 	if (fftIndex < 0)
 		fftIndex += nPhiGlobal;
@@ -81,8 +86,11 @@ __global__ void shiftFKernel
 __global__ void copy2UFourier
 (ComplexFourier* UFourierOutput, fReal* UFourierReal, fReal* UFourierImag)
 {
-	int nIdx = threadIdx.x + threadIdx.y * blockIdx.x;;
-	int thetaIdx = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int nIdx = threadIdx.x + threadSequence * blockDim.x;
+	int thetaIdx = blockIdx.x / splitVal;
+
 	ComplexFourier u;
 	u.x = UFourierReal[nIdx * nThetaGlobal + thetaIdx];
 	u.y = UFourierImag[nIdx * nThetaGlobal + thetaIdx];
@@ -92,7 +100,10 @@ __global__ void copy2UFourier
 __global__ void cacheZeroComponents
 (fReal* zeroComponentCache, ComplexFourier* input)
 {
-	int thetaIdx = threadIdx.x + threadIdx.y * blockIdx.x;;
+	int splitVal = nThetaGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int thetaIdx = threadIdx.x + threadSequence * blockDim.x;
+
 	zeroComponentCache[thetaIdx] = input[thetaIdx * nPhiGlobal + nPhiGlobal / 2].x;
 }
 
@@ -100,8 +111,11 @@ __global__ void shiftUKernel
 (ComplexFourier* UFourierInput, fReal* pressure, fReal* zeroComponentCache,
 	size_t nPressurePitchInElements)
 {
-	int phiIdx = threadIdx.x + threadIdx.y * blockIdx.x;;
-	int thetaIdx = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiIdx = threadIdx.x + threadSequence * blockDim.x;
+	int thetaIdx = blockIdx.x / splitVal;
+
 	int fftIndex = 0;
 	fReal zeroComponent = zeroComponentCache[thetaIdx];
 	if (phiIdx != 0)
@@ -120,8 +134,10 @@ __global__ void applyPressureTheta
 (fReal* output, fReal* prev, fReal* pressure,
 	size_t nPitchInElementsPressure, size_t nPitchInElementsVTheta)
 {
-	int phiId = threadIdx.x + threadIdx.y * blockIdx.x;;
-	int thetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
 
 	int pressureThetaNorthId = thetaId;
 	int pressureThetaSouthId = thetaId + 1;
@@ -136,8 +152,10 @@ __global__ void applyPressurePhi
 (fReal* output, fReal* prev, fReal* pressure,
 	size_t nPitchInElementsPressure, size_t nPitchInElementsVPhi)
 {
-	int phiId = threadIdx.x + threadIdx.y * blockIdx.x;;
-	int thetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
 
 	int pressurePhiWestId;
 	if (phiId == 0)

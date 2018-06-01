@@ -3,6 +3,9 @@
 // CONSTRUCTOR / DESTRUCTOR >>>>>>>>>>
 
 const int fftRank = 1;
+static __constant__ size_t nPhiGlobal;
+static __constant__ size_t nThetaGlobal;
+static __constant__ fReal gridLenGlobal;
 
 KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 	fReal A, int B, int C, int D, int E) :
@@ -97,23 +100,27 @@ void KaminoSolver::copyVelocity2GPU()
 }
 
 __global__ void precomputeABCKernel
-(fReal* A, fReal* B, fReal* C, fReal gridLen, int nPhi, int nTheta)
+(fReal* A, fReal* B, fReal* C)
 {
-	int nIndex = blockIdx.x;
-	int n = nIndex - nPhi / 2;
-	int i = threadIdx.x + blockIdx.y * blockDim.x;
-	int index = nIndex * nTheta + i;
-	fReal thetaI = (i + centeredThetaOffset) * gridLen;
+	int splitVal = nThetaGlobal / blockDim.x;
+	int nIndex = blockIdx.x / splitVal;
+	int threadSequence = blockIdx.x % splitVal;
+
+	int i = threadIdx.x + threadSequence * blockDim.x;
+	int n = nIndex - nPhiGlobal / 2;
+
+	int index = nIndex * nThetaGlobal + i;
+	fReal thetaI = (i + centeredThetaOffset) * gridLenGlobal;
 
 	fReal cosThetaI = cosf(thetaI);
 	fReal sinThetaI = sinf(thetaI);
 
-	fReal valB = -2.0 / (gridLen * gridLen)
+	fReal valB = -2.0 / (gridLenGlobal * gridLenGlobal)
 		- n * n / (sinThetaI * sinThetaI);
-	fReal valA = 1.0 / (gridLen * gridLen)
-		- cosThetaI / 2.0 / gridLen / sinThetaI;
-	fReal valC = 1.0 / (gridLen * gridLen)
-		+ cosThetaI / 2.0 / gridLen / sinThetaI;
+	fReal valA = 1.0 / (gridLenGlobal * gridLenGlobal)
+		- cosThetaI / 2.0 / gridLenGlobal / sinThetaI;
+	fReal valC = 1.0 / (gridLenGlobal * gridLenGlobal)
+		+ cosThetaI / 2.0 / gridLenGlobal / sinThetaI;
 	if (n != 0)
 	{
 		if (i == 0)
@@ -122,7 +129,7 @@ __global__ void precomputeABCKernel
 			valB += valA;
 			valA = 0.0;
 		}
-		if (i == nTheta - 1)
+		if (i == nThetaGlobal - 1)
 		{
 			fReal coef = powf(-1.0, n);
 			valB += valC;
@@ -150,18 +157,24 @@ void KaminoSolver::determineLayout(dim3& gridLayout, dim3& blockLayout,
 	}
 	else
 	{
-		gridLayout = dim3(nTheta_row, (nPhi_col + nThreadxMax - 1) / nThreadxMax);
+		int splitVal = (nPhi_col + nThreadxMax - 1) / nThreadxMax;
+
+		gridLayout = dim3(nTheta_row * splitVal);
 		blockLayout = dim3(nThreadxMax);
 	}
 }
 
 void KaminoSolver::precomputeABCCoef()
 {
+	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
+
 	dim3 gridLayout;
 	dim3 blockLayout;
 	determineLayout(gridLayout, blockLayout, nPhi, nTheta);
 	precomputeABCKernel<<<gridLayout, blockLayout>>>
-	(this->gpuA, this->gpuB, this->gpuC, gridLen, nPhi, nTheta);
+	(this->gpuA, this->gpuB, this->gpuC);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 }

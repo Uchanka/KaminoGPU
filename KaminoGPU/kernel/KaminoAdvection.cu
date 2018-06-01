@@ -35,8 +35,10 @@ __global__ void advectionVPhiKernel
 	(fReal* attributeOutput, size_t nPitchInElements)
 {
 	// Index
-    int phiId = threadIdx.x + blockIdx.y * blockDim.x;
-	int thetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+    int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
 	// Coord in phi-theta space
 	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLenGlobal;
 	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
@@ -86,8 +88,10 @@ __global__ void advectionVThetaKernel
 (fReal* attributeOutput, size_t nPitchInElements)
 {
 	// Index
-	int phiId = threadIdx.x + blockIdx.y * blockDim.x;
-	int thetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
 	// Coord in phi-theta space
 	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLenGlobal;
 	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;

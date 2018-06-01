@@ -83,8 +83,10 @@ __global__ void geometricPhiKernel
 (fReal* velPhiOutput, size_t nPitchInElements)
 {
 	// Index
-	int phiId = threadIdx.x + threadIdx.y * blockDim.x;
-	int thetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
 	// Coord in phi-theta space
 	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
 	// The factor
@@ -107,8 +109,10 @@ __global__ void geometricThetaKernel
 (fReal* velThetaOutput, size_t nPitchInElements)
 {
 	// Index
-	int phiId = threadIdx.x + threadIdx.y * blockDim.x;
-	int thetaId = blockIdx.x;
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
 	// Coord in phi-theta space
 	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;
 	// The factor
