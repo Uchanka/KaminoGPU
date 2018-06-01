@@ -144,12 +144,9 @@ void KaminoSolver::geometric()
 
 
 
-	dim3 gridLayout = dim3(nTheta - 1);
-	dim3 blockLayout = dim3(nPhi);
-	if (nPhi > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
-	}
+	dim3 gridLayout;
+	dim3 blockLayout;
+	determineLayout(gridLayout, blockLayout, nTheta - 1, nPhi);
 	geometricPhiKernel<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
@@ -159,7 +156,6 @@ void KaminoSolver::geometric()
 
 	geometricThetaKernel<<<gridLayout, blockLayout>>>
 	(velTheta->getGPUNextStep(), velTheta->getNextStepPitchInElements());
-
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 

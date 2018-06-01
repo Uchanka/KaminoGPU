@@ -164,13 +164,9 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
 
 
-
-	dim3 gridLayout(nTheta);
-	dim3 blockLayout = dim3(nPhi);
-	if (nPhi > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
-	}
+	dim3 gridLayout;
+	dim3 blockLayout;
+	determineLayout(gridLayout, blockLayout, nTheta, nPhi);
 	fillDivergenceKernel<<<gridLayout, blockLayout>>>
 	(this->gpuFFourier, this->velPhi->getGPUThisStep(), this->velTheta->getGPUThisStep(),
 		this->velPhi->getThisStepPitchInElements(), this->velTheta->getThisStepPitchInElements());
@@ -187,12 +183,7 @@ void KaminoSolver::projection()
 
 
 	// Siglen is nPhi
-	gridLayout = dim3(nTheta);
-	blockLayout = dim3(nPhi);
-	if (nPhi > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
-	}
+	determineLayout(gridLayout, blockLayout, nTheta, nPhi);
 	shiftFKernel<<<gridLayout, blockLayout>>>
 	(gpuFFourier, gpuFReal, gpuFImag);
 	checkCudaErrors(cudaGetLastError());
@@ -218,12 +209,7 @@ void KaminoSolver::projection()
 
 
 
-	gridLayout = dim3(nTheta);
-	blockLayout = dim3(nPhi);
-	if (nPhi > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
-	}
+	determineLayout(gridLayout, blockLayout, nTheta, nPhi);
 	copy2UFourier<<<gridLayout, blockLayout>>>
 	(this->gpuUFourier, this->gpuUReal, this->gpuUImag);
 	checkCudaErrors(cudaGetLastError());
@@ -231,12 +217,7 @@ void KaminoSolver::projection()
 
 
 
-	gridLayout = dim3(1);
-	blockLayout = dim3(nTheta);
-	if (nTheta > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nTheta + nThreadxMax - 1) / nThreadxMax);
-	}
+	determineLayout(gridLayout, blockLayout, 1, nTheta);
 	cacheZeroComponents<<<gridLayout, blockLayout>>>
 	(gpuFZeroComponent, gpuUFourier);
 	checkCudaErrors(cudaGetLastError());
@@ -250,12 +231,7 @@ void KaminoSolver::projection()
 
 
 
-	gridLayout = dim3(nTheta);
-	blockLayout = dim3(nPhi);
-	if (nPhi > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nPhi + nThreadxMax - 1) / nThreadxMax);
-	}
+	determineLayout(gridLayout, blockLayout, nTheta, nPhi);
 	shiftUKernel<<<gridLayout, blockLayout>>>
 	(gpuUFourier, pressure->getGPUThisStep(), this->gpuFZeroComponent,
 		pressure->getThisStepPitchInElements());
@@ -264,24 +240,14 @@ void KaminoSolver::projection()
 
 	//pressure->copyBackToCPU();
 
-	gridLayout = dim3(velTheta->getNTheta());
-	blockLayout = dim3(velTheta->getNPhi());
-	if (velTheta->getNPhi() > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (velTheta->getNPhi() + nThreadxMax - 1) / nThreadxMax);
-	}
+	determineLayout(gridLayout, blockLayout, velTheta->getNTheta(), velTheta->getNPhi());
 	applyPressureTheta<<<gridLayout, blockLayout>>>
 		(velTheta->getGPUNextStep(), velTheta->getGPUThisStep(), pressure->getGPUThisStep(),
 			pressure->getThisStepPitchInElements(), velTheta->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	gridLayout = dim3(velPhi->getNTheta());
-	blockLayout = dim3(velPhi->getNPhi());
-	if (velPhi->getNPhi() > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (velPhi->getNPhi() + nThreadxMax - 1) / nThreadxMax);
-	}
+	determineLayout(gridLayout, blockLayout, velPhi->getNTheta(), velPhi->getNPhi());
 	applyPressurePhi<<<gridLayout, blockLayout>>>
 	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), pressure->getGPUThisStep(),
 		pressure->getThisStepPitchInElements(), velPhi->getNextStepPitchInElements());

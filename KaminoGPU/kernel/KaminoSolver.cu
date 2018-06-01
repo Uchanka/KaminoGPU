@@ -101,7 +101,7 @@ __global__ void precomputeABCKernel
 {
 	int nIndex = blockIdx.x;
 	int n = nIndex - nPhi / 2;
-	int i = threadIdx.x + threadIdx.y * blockDim.x;
+	int i = threadIdx.x + blockIdx.y * blockDim.x;
 	int index = nIndex * nTheta + i;
 	fReal thetaI = (i + centeredThetaOffset) * gridLen;
 
@@ -140,15 +140,26 @@ __global__ void precomputeABCKernel
 	C[index] = valC;
 }
 
+void KaminoSolver::determineLayout(dim3& gridLayout, dim3& blockLayout,
+	size_t nTheta_row, size_t nPhi_col)
+{
+	if (nPhi_col <= this->nThreadxMax)
+	{
+		gridLayout = dim3(nTheta_row);
+		blockLayout = dim3(nPhi_col);
+	}
+	else
+	{
+		gridLayout = dim3(nTheta_row, (nPhi_col + nThreadxMax - 1) / nThreadxMax);
+		blockLayout = dim3(nThreadxMax);
+	}
+}
+
 void KaminoSolver::precomputeABCCoef()
 {
-	dim3 gridLayout = dim3(nPhi);
-	size_t blockYDim = 1;
-	dim3 blockLayout = dim3(nTheta);
-	if (nTheta > nThreadxMax)
-	{
-		blockLayout = dim3(nThreadxMax, (nTheta + nThreadxMax - 1) / nThreadxMax);
-	}
+	dim3 gridLayout;
+	dim3 blockLayout;
+	determineLayout(gridLayout, blockLayout, nPhi, nTheta);
 	precomputeABCKernel<<<gridLayout, blockLayout>>>
 	(this->gpuA, this->gpuB, this->gpuC, gridLen, nPhi, nTheta);
 	checkCudaErrors(cudaGetLastError());

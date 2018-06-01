@@ -84,6 +84,9 @@ private:
 	fReal interpNoise2D(const fReal x, const fReal y) const;
 	/* returns a pseudorandom number between -1 and 1 */
 	fReal rand(const vec2 vecA) const;
+	/* determine the layout of the grids and blocks */
+	void determineLayout(dim3& gridLayout, dim3& blockLayout,
+		size_t nRow_theta, size_t nCol_phi);
 public:
 	KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 		fReal A, int B, int C, int D, int E);
