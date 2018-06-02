@@ -1,4 +1,5 @@
 # include "../include/KaminoSolver.cuh"
+# include "../opencv_headers/opencv2/opencv.hpp"
 
 // CONSTRUCTOR / DESTRUCTOR >>>>>>>>>>
 
@@ -51,9 +52,10 @@ KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frame
 		vThetaPhiOffset, vThetaThetaOffset);
 	this->pressure = new KaminoQuantity("p", nPhi, nTheta,
 		centeredPhiOffset, centeredThetaOffset);
+	this->density = new KaminoQuantity("density", nPhi, nTheta,
+		centeredPhiOffset, centeredThetaOffset);
 
 	initialize_velocity();
-	copyVelocity2GPU();
 
 	int sigLenArr[1];
 	sigLenArr[0] = nPhi;
@@ -81,6 +83,7 @@ KaminoSolver::~KaminoSolver()
 	delete this->velPhi;
 	delete this->velTheta;
 	delete this->pressure;
+	delete this->density;
 
 	checkCudaErrors(cudaDeviceReset());
 }
@@ -97,6 +100,11 @@ void KaminoSolver::copyVelocity2GPU()
 {
 	velPhi->copyToGPU();
 	velTheta->copyToGPU();
+}
+
+void KaminoSolver::copyDensity2GPU()
+{
+	density->copyToGPU();
 }
 
 __global__ void precomputeABCKernel
@@ -190,7 +198,7 @@ void KaminoSolver::stepForward(fReal timeStep)
 	this->timeElapsed += timeStep;
 }
 
-void KaminoSolver::swapAttrBuffers()
+void KaminoSolver::swapVelocityBuffers()
 {
 	this->velPhi->swapGPUBuffer();
 	this->velTheta->swapGPUBuffer();
@@ -202,10 +210,49 @@ void KaminoSolver::copyVelocityBack2CPU()
 	this->velTheta->copyBackToCPU();
 }
 
+void KaminoSolver::copyDensityBack2CPU()
+{
+	this->density->copyBackToCPU();
+}
 
 // <<<<<<<<<<
 // OUTPUT >>>>>>>>>>
 
+void KaminoSolver::initDensityfromPic(std::string path)
+{
+	if (path == "")
+	{
+		return;
+	}
+	cv::Mat image_In;
+	image_In = cv::imread(path, cv::IMREAD_COLOR);
+	if (!image_In.data)
+	{
+		std::cerr << "No density image provided." << std::endl;
+		return;
+	}
+
+	cv::Mat image_Flipped;
+	cv::flip(image_In, image_Flipped, 1);
+
+	cv::Mat image_Resized;
+	cv::Size size(nPhi, nTheta);
+	cv::resize(image_Flipped, image_Resized, size);
+
+	for (size_t i = 0; i < nPhi; ++i)
+	{
+		for (size_t j = 0; j < nTheta; ++j)
+		{
+			cv::Point3_<uchar>* p = image_Resized.ptr<cv::Point3_<uchar>>(j, i);
+			fReal B = p->x / 255.0; // B
+			fReal G = p->y / 255.0; // G
+			fReal R = p->z / 255.0; // R
+			this->density->setCPUValueAt(i, j, (B + G + R) / 3.0);
+		}
+	}
+
+	this->density->copyToGPU();
+}
 
 void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 {
@@ -213,9 +260,10 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	std::cout << "Writing to: " << file << std::endl;
 
 	Partio::ParticlesDataMutable* parts = Partio::create();
-	Partio::ParticleAttribute pH, vH;// , psH, dens;
+	Partio::ParticleAttribute pH, vH, densityVal;
 	pH = parts->addAttribute("position", Partio::VECTOR, 3);
 	vH = parts->addAttribute("v", Partio::VECTOR, 3);
+	densityVal = parts->addAttribute("densityValue", Partio::FLOAT, 1);
 
 	vec3 pos;
 	vec3 vel;
@@ -225,6 +273,7 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 	velPhi->copyBackToCPU();
 	velTheta->copyBackToCPU();
+	density->copyBackToCPU();
 
 	for (size_t j = 0; j < nTheta; ++j)
 	{
@@ -260,15 +309,19 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 			mapVToSphere(pos, vel);
 			mapPToSphere(pos);
 
+			float densityValuefloat = density->getCPUValueAt(i, j);
+
 			int idx = parts->addParticle();
 			float* p = parts->dataWrite<float>(pH, idx);
 			float* v = parts->dataWrite<float>(vH, idx);
+			float* d = parts->dataWrite<float>(densityVal, idx);
 			
 			for (int k = 0; k < 3; ++k) 
 			{
 				p[k] = pos[k];
 				v[k] = vel[k];
 			}
+			d[0] = densityValuefloat;
 		}
 	}
 

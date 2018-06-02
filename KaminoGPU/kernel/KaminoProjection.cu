@@ -272,5 +272,5 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	swapAttrBuffers();
+	swapVelocityBuffers();
 }

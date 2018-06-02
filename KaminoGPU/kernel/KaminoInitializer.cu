@@ -78,6 +78,7 @@ void KaminoSolver::initialize_velocity()
 			v->setCPUValueAt(i, j, avgNoise);
 		}
 	}
+	copyVelocity2GPU();
 }
 
 fReal KaminoSolver::FBM(const fReal x, const fReal y) {

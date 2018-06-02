@@ -59,3 +59,5 @@ const fReal vSolid = 0.0;
 enum gridType { FLUIDGRID, SOLIDGRID };
 
 enum Coord { phi, theta };
+
+# define WRITE_BGEO

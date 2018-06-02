@@ -1,5 +1,4 @@
 # include "../include/KaminoGPU.cuh"
-# define WRITE_BGEO
 
 Kamino::Kamino(fReal radius, size_t nTheta, fReal particleDensity,
 	float dt, float DT, int frames,
@@ -20,6 +19,7 @@ Kamino::~Kamino()
 void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
+	solver.initDensityfromPic(densityImage);
 	
 # ifdef WRITE_BGEO
 	solver.write_data_bgeo(gridPath, 0);

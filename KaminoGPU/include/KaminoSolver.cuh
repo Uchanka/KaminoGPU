@@ -54,8 +54,11 @@ private:
 	KaminoQuantity* velTheta;
 	KaminoQuantity* velPhi;
 	KaminoQuantity* pressure;
+	KaminoQuantity* density;
 	void copyVelocity2GPU();
 	void copyVelocityBack2CPU();
+	void copyDensity2GPU();
+	void copyDensityBack2CPU();
 
 	/* Something about time steps */
 	fReal frameDuration;
@@ -68,7 +71,7 @@ private:
 	void projection();
 
 	// Swap all these buffers of the attributes.
-	void swapAttrBuffers();
+	void swapVelocityBuffers();
 
 	/* distribute initial velocity values at grid points */
 	void initialize_velocity();
@@ -91,6 +94,8 @@ public:
 	KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 		fReal A, int B, int C, int D, int E);
 	~KaminoSolver();
+
+	void initDensityfromPic(std::string path);
 
 	void stepForward(fReal timeStep);
 

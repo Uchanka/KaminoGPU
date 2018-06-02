@@ -167,5 +167,5 @@ void KaminoSolver::geometric()
 
 	velPhi->unbindTexture(&texGeoVelPhi);
 	velTheta->unbindTexture(&texGeoVelTheta);
-	swapAttrBuffers();
+	swapVelocityBuffers();
 }
