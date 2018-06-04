@@ -3,11 +3,11 @@
 static table2D texGeoVelPhi;
 static table2D texGeoVelTheta;
 
-static __constant__ size_t nPhiGlobal;
-static __constant__ size_t nThetaGlobal;
-static __constant__ fReal radiusGlobal;
-static __constant__ fReal timeStepGlobal;
-static __constant__ fReal gridLenGlobal;
+static __constant__ size_t nPhiGlobalGeo;
+static __constant__ size_t nThetaGlobalGeo;
+static __constant__ fReal radiusGlobalGeo;
+static __constant__ fReal timeStepGlobalGeo;
+static __constant__ fReal gridLenGlobalGeo;
 
 __device__ fReal _root3(fReal x)
 {
@@ -79,20 +79,20 @@ __device__ fReal solveCubic(fReal a, fReal b, fReal c)
 	}
 }
 
-//nTheta - 2 by nPhi
+//nTheta - 1 by nPhi
 __global__ void geometricKernel
 (fReal* velPhiOutput, fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
 	size_t nPitchInElements)
 {
 	// Index
-	int splitVal = nPhiGlobal / blockDim.x;
+	int splitVal = nPhiGlobalGeo / blockDim.x;
 	int threadSequence = blockIdx.x % splitVal;
 	int phiId = threadIdx.x + threadSequence * blockDim.x;
 	int thetaId = blockIdx.x / splitVal;
 	// Coord in phi-theta space
-	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
+	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobalGeo;
 	// The factor
-	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
+	fReal factor = timeStepGlobalGeo * cosf(gTheta) / (radiusGlobalGeo * sinf(gTheta));
 
 	fReal uPrev = velPhiInput[phiId + nPitchInElements * (thetaId + 1)];
 	fReal vPrev = velThetaInput[phiId + nPitchInElements * thetaId];
@@ -101,7 +101,7 @@ __global__ void geometricKernel
 	fReal uNext;
 	if (abs(sinf(gTheta)) < eps)
 	{
-		G = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
+		G = timeStepGlobalGeo * cosf(gTheta) / (radiusGlobalGeo * sinf(gTheta));
 		fReal cof = G * G;
 		fReal A = 0.0;
 		fReal B = (G * vPrev + 1.0) / cof;
@@ -118,54 +118,43 @@ __global__ void geometricKernel
 
 	velPhiOutput[(thetaId + 1) * nPitchInElements + phiId] = uNext;
 	velThetaOutput[thetaId * nPitchInElements + phiId] = vNext;
-};
+}
 
-//2 by nPhi
-__global__ void copyKernel(fReal* velPhiOutput, fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
+//1 by nPhi
+__global__ void copyKernel(fReal* velPhiOutput, fReal* velPhiInput,
 	size_t nPitchInElements)
 {
 	// Index
-	int splitVal = nPhiGlobal / blockDim.x;
+	int splitVal = nPhiGlobalGeo / blockDim.x;
 	int threadSequence = blockIdx.x % splitVal;
 	int phiId = threadIdx.x + threadSequence * blockDim.x;
 	int thetaId = blockIdx.x / splitVal;
+
+	velPhiOutput[phiId] = velPhiInput[phiId];
+	velPhiOutput[phiId + (nThetaGlobalGeo - 1) * nPitchInElements] 
+		= velPhiInput[phiId + (nThetaGlobalGeo - 1) * nPitchInElements];
 }
 
 void KaminoSolver::geometric()
 {
-	setTextureParams(&texGeoVelPhi);
-	setTextureParams(&texGeoVelTheta);
-	velPhi->bindTexture(&texGeoVelPhi);
-	velTheta->bindTexture(&texGeoVelTheta);
-
-
-
-	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, (&this->nPhi), sizeof(size_t)));
-	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, (&this->nTheta), sizeof(size_t)));
-	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobal, (&this->radius), sizeof(fReal)));
-	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, (&this->timeStep), sizeof(fReal)));
-	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, (&this->gridLen), sizeof(fReal)));
-
-
-
 	dim3 gridLayout;
 	dim3 blockLayout;
 	determineLayout(gridLayout, blockLayout, nTheta - 1, nPhi);
-	geometricPhiKernel<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velPhi->getNextStepPitchInElements());
+	geometricKernel<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(), velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
+		velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
 
-	geometricThetaKernel<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(), velTheta->getNextStepPitchInElements());
+	determineLayout(gridLayout, blockLayout, 1, nPhi);
+	copyKernel<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
 
-	velPhi->unbindTexture(&texGeoVelPhi);
-	velTheta->unbindTexture(&texGeoVelTheta);
 	swapVelocityBuffers();
 }

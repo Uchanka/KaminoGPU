@@ -86,6 +86,8 @@ KaminoSolver::~KaminoSolver()
 	delete this->density;
 
 	checkCudaErrors(cudaDeviceReset());
+
+	//delete this->particles;
 }
 
 void KaminoSolver::setTextureParams(table2D* tex)
@@ -192,8 +194,8 @@ void KaminoSolver::stepForward(fReal timeStep)
 	this->timeStep = timeStep;
 
 	advection();
-	geometric();
-	projection();
+	//geometric();
+	//projection();
 
 	this->timeElapsed += timeStep;
 }
@@ -256,7 +258,7 @@ void KaminoSolver::initDensityfromPic(std::string path)
 
 void KaminoSolver::initParticlesfromPic(std::string path, size_t parPerGrid)
 {
-	this->particles = new KaminoParticles(path, parPerGrid, nTheta);
+	//this->particles = new KaminoParticles(path, parPerGrid, nTheta);
 }
 
 void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
@@ -334,7 +336,7 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	parts->release();
 }
 
-void KaminoSolver::write_particles_bgeo(const std::string& s, const int frame)
+/*void KaminoSolver::write_particles_bgeo(const std::string& s, const int frame)
 {
 	std::string file = s + std::to_string(frame) + ".bgeo";
 	std::cout << "Writing to: " << file << std::endl;
@@ -372,7 +374,7 @@ void KaminoSolver::write_particles_bgeo(const std::string& s, const int frame)
 
 	Partio::write(file.c_str(), *parts);
 	parts->release();
-}
+}*/
 
 void KaminoSolver::mapPToSphere(vec3& pos) const
 {

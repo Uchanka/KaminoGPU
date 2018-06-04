@@ -9,7 +9,7 @@ private:
 	// Handle for batched FFT
 	cufftHandle kaminoPlan;
 
-	KaminoParticles* particles;
+	// KaminoParticles* particles;
 
 	// Buffer for U, the fouriered coefs
 	// This pointer's for the pooled global memory (nTheta by nPhi)
