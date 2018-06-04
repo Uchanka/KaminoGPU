@@ -29,7 +29,7 @@ private:
 	fReal* gpuNextStep;
 	size_t nextStepPitch;
 
-	cudaChannelFormatDesc desc;
+	//cudaChannelFormatDesc desc;
 	/* Get index */
 	//size_t getIndex(size_t phi, size_t theta);
 

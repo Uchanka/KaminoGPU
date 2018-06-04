@@ -1,11 +1,11 @@
 # include "../include/KaminoQuantity.cuh"
 
-cudaChannelFormatDesc KaminoQuantity::channelFormat
-= cudaCreateChannelDesc(sizeof(fReal) * byte2Bits, 0, 0, 0, cudaChannelFormatKindFloat);
-
 void KaminoQuantity::bindTexture(table2D* tex)
 {
-	checkCudaErrors(cudaBindTexture2D(0, tex, gpuThisStep, &desc,
+	cudaChannelFormatDesc channelFormat
+		= cudaCreateChannelDesc(sizeof(fReal) * byte2Bits, 0, 0, 0, cudaChannelFormatKindFloat);
+
+	checkCudaErrors(cudaBindTexture2D(0, tex, gpuThisStep, &channelFormat,
 		nPhi, nTheta, thisStepPitch));
 }
 
@@ -36,8 +36,6 @@ KaminoQuantity::KaminoQuantity(std::string attributeName, size_t nPhi, size_t nT
 	: nPhi(nPhi), nTheta(nTheta), gridLen(M_2PI / nPhi), invGridLen(1.0 / gridLen),
 	attrName(attributeName), phiOffset(phiOffset), thetaOffset(thetaOffset)
 {
-	desc = cudaCreateChannelDesc<fReal>();
-
 	cpuBuffer = new fReal[nPhi * nTheta];
 	checkCudaErrors(cudaMallocPitch((void**)&gpuThisStep, &thisStepPitch, nPhi * sizeof(fReal), nTheta));
 	checkCudaErrors(cudaMallocPitch((void**)&gpuNextStep, &nextStepPitch, nPhi * sizeof(fReal), nTheta));

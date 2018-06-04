@@ -79,8 +79,10 @@ __device__ fReal solveCubic(fReal a, fReal b, fReal c)
 	}
 }
 
-__global__ void geometricPhiKernel
-(fReal* velPhiOutput, size_t nPitchInElements)
+//nTheta - 2 by nPhi
+__global__ void geometricKernel
+(fReal* velPhiOutput, fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
+	size_t nPitchInElements)
 {
 	// Index
 	int splitVal = nPhiGlobal / blockDim.x;
@@ -92,43 +94,41 @@ __global__ void geometricPhiKernel
 	// The factor
 	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
 
-	// Coord in u-v texture space
-	fReal gPhiTex = (fReal)phiId / nPhiGlobal;
-	fReal gThetaTex = (fReal)thetaId / nThetaGlobal;
+	fReal uPrev = velPhiInput[phiId + nPitchInElements * (thetaId + 1)];
+	fReal vPrev = velThetaInput[phiId + nPitchInElements * thetaId];
 
-	// Sample the speed
-	fReal guPhi = tex2D(texGeoVelPhi, gPhiTex, gThetaTex);
-	fReal guTheta = tex2D(texGeoVelTheta, gPhiTex, gThetaTex);
+	fReal G;
+	fReal uNext;
+	if (abs(sinf(gTheta)) < eps)
+	{
+		G = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
+		fReal cof = G * G;
+		fReal A = 0.0;
+		fReal B = (G * vPrev + 1.0) / cof;
+		fReal C = -uPrev / cof;
 
-	fReal updateduPhi = guPhi - factor * guPhi * gTheta;
+		uNext = solveCubic(A, B, C);
+	}
+	else
+	{
+		uNext = uPrev;
+	}
+	
+	fReal vNext = vPrev + G * uNext * uNext;
 
-	velPhiOutput[thetaId * nPitchInElements + phiId] = updateduPhi;
+	velPhiOutput[(thetaId + 1) * nPitchInElements + phiId] = uNext;
+	velThetaOutput[thetaId * nPitchInElements + phiId] = vNext;
 };
 
-__global__ void geometricThetaKernel
-(fReal* velThetaOutput, size_t nPitchInElements)
+//2 by nPhi
+__global__ void copyKernel(fReal* velPhiOutput, fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
+	size_t nPitchInElements)
 {
 	// Index
 	int splitVal = nPhiGlobal / blockDim.x;
 	int threadSequence = blockIdx.x % splitVal;
 	int phiId = threadIdx.x + threadSequence * blockDim.x;
 	int thetaId = blockIdx.x / splitVal;
-	// Coord in phi-theta space
-	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;
-	// The factor
-	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
-
-	// Coord in u-v texture space
-	fReal gPhiTex = (fReal)phiId / nPhiGlobal;
-	fReal gThetaTex = (fReal)thetaId / nThetaGlobal;
-
-	// Sample the speed
-	fReal guPhi = tex2D(texGeoVelPhi, gPhiTex, gThetaTex);
-	fReal guTheta = tex2D(texGeoVelTheta, gPhiTex, gThetaTex);
-
-	fReal updateduTheta = guTheta + factor * guPhi * guPhi;
-
-	velThetaOutput[thetaId * nPitchInElements + phiId] = updateduTheta;
 }
 
 void KaminoSolver::geometric()
