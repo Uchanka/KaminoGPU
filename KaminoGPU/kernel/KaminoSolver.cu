@@ -194,8 +194,8 @@ void KaminoSolver::stepForward(fReal timeStep)
 	this->timeStep = timeStep;
 
 	advection();
-	//geometric();
-	//projection();
+	geometric();
+	projection();
 
 	this->timeElapsed += timeStep;
 }

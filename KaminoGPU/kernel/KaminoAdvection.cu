@@ -13,7 +13,7 @@ static __constant__ fReal gridLenGlobalAdv;
 __device__ fReal validateCoord(fReal& phi, fReal& theta)
 {
 	fReal ret = 1.0f;
-	theta = theta - floorf(theta / M_2PI);
+	theta = theta - static_cast<int>(floorf(theta / M_2PI));
 	if (theta > M_PI)
 	{
 		theta = M_2PI - theta;
@@ -26,7 +26,7 @@ __device__ fReal validateCoord(fReal& phi, fReal& theta)
 		phi += M_PI;
 		ret = -ret;
 	}
-	phi = phi - floorf(phi / M_2PI);
+	phi = phi - static_cast<int>(floorf(phi / M_2PI));
 	return ret;
 }
 
