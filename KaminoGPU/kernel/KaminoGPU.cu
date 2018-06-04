@@ -20,9 +20,11 @@ void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
 	solver.initDensityfromPic(densityImage);
+	solver.initParticlesfromPic(colorImage, this->particleDensity);
 	
 # ifdef WRITE_BGEO
 	solver.write_data_bgeo(gridPath, 0);
+	solver.write_particles_bgeo(particlePath, 0);
 # endif
 
 	float T = 0.0;              // simulation time
@@ -39,6 +41,7 @@ void Kamino::run()
 		std::cout << "Frame " << i << " is ready" << std::endl;
 # ifdef WRITE_BGEO
 		solver.write_data_bgeo(gridPath, i);
+		solver.write_particles_bgeo(particlePath, i);
 # endif
 	}
 }

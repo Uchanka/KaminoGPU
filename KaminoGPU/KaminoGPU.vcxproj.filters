@@ -24,6 +24,9 @@
     <ClInclude Include="include\KaminoSolver.cuh">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\KaminoParticles.cuh">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\tdm.cu">
@@ -54,6 +57,9 @@
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\vectorUtil.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoParticles.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>

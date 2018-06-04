@@ -1,12 +1,15 @@
 # pragma once
 
-# include "KaminoQuantity.cuh"
+# include "../include/KaminoQuantity.cuh"
+# include "../include/KaminoParticles.cuh"
 
 class KaminoSolver
 {
 private:
 	// Handle for batched FFT
 	cufftHandle kaminoPlan;
+
+	KaminoParticles* particles;
 
 	// Buffer for U, the fouriered coefs
 	// This pointer's for the pooled global memory (nTheta by nPhi)
@@ -96,8 +99,10 @@ public:
 	~KaminoSolver();
 
 	void initDensityfromPic(std::string path);
+	void initParticlesfromPic(std::string path, size_t parPergrid);
 
 	void stepForward(fReal timeStep);
 
 	void write_data_bgeo(const std::string& s, const int frame);
+	void write_particles_bgeo(const std::string& s, const int frame);
 };

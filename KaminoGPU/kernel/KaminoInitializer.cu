@@ -6,6 +6,8 @@ void KaminoSolver::initialize_velocity()
 	KaminoQuantity* u = this->velPhi;
 	KaminoQuantity* v = this->velTheta;
 
+	fReal gain = 512.0 / nPhi;
+
 	for (size_t j = 0; j < u->getNTheta(); ++j)
 	{
 		for (size_t i = 1; i < u->getNPhi(); ++i)
@@ -22,17 +24,16 @@ void KaminoSolver::initialize_velocity()
 			fReal noise_lr = FBM(lr_x, lr_y);
 			fReal noise_ul = FBM(ul_x, ul_y);
 			fReal noise_ll = FBM(ll_x, ll_y);
-			fReal noiseDy_l = (noise_ur - noise_lr);
-			fReal noiseDy_r = (noise_ul - noise_ll);
-			//fReal noiseDy_l = (noise_ur - noise_lr) / (radius * gridLen);
-			//fReal noiseDy_r = (noise_ul - noise_ll) / (radius * gridLen);
+			//fReal noiseDy_l = (noise_ur - noise_lr);
+			//fReal noiseDy_r = (noise_ul - noise_ll);
+			fReal noiseDy_l = (noise_ur - noise_lr) / (radius * gridLen);
+			fReal noiseDy_r = (noise_ul - noise_ll) / (radius * gridLen);
 			fReal avgNoise = (noiseDy_l + noiseDy_r) / 2.0;
-			u->setCPUValueAt(i, j, avgNoise);
+			u->setCPUValueAt(i, j, avgNoise * gain);
 		}
 	}
 	// phi = 0 seam
-	for (size_t j = 0; j < u->getNTheta(); ++j)
-	{
+	for (size_t j = 0; j < u->getNTheta(); ++j) {
 		fReal ur_x = gridLen / 2;
 		fReal ur_y = (j + 1) * gridLen;
 		fReal lr_x = gridLen / 2;
@@ -45,12 +46,12 @@ void KaminoSolver::initialize_velocity()
 		fReal noise_lr = FBM(lr_x, lr_y);
 		fReal noise_ul = FBM(ul_x, ul_y);
 		fReal noise_ll = FBM(ll_x, ll_y);
-		fReal noiseDy_l = (noise_ur - noise_lr);
-		fReal noiseDy_r = (noise_ul - noise_ll);
-		//fReal noiseDy_l = (noise_ur - noise_lr) / (radius * gridLen);
-		//fReal noiseDy_r = (noise_ul - noise_ll) / (radius * gridLen);
+		//fReal noiseDy_l = (noise_ur - noise_lr);
+		//fReal noiseDy_r = (noise_ul - noise_ll);
+		fReal noiseDy_l = (noise_ur - noise_lr) / (radius * gridLen);
+		fReal noiseDy_r = (noise_ul - noise_ll) / (radius * gridLen);
 		fReal avgNoise = (noiseDy_l + noiseDy_r) / 2.0;
-		u->setCPUValueAt(0, j, avgNoise);
+		u->setCPUValueAt(0, j, avgNoise * gain);
 	}
 
 	// set u_theta initial values using FBM curl noise
@@ -70,12 +71,14 @@ void KaminoSolver::initialize_velocity()
 			fReal noise_lr = FBM(lr_x, lr_y);
 			fReal noise_ul = FBM(ul_x, ul_y);
 			fReal noise_ll = FBM(ll_x, ll_y);
-			fReal noiseDy_u = -1 * (noise_ur - noise_ul);
-			fReal noiseDy_d = -1 * (noise_lr - noise_ll);
+			//fReal noiseDy_u = -1 * (noise_ur - noise_ul);
+			//fReal noiseDy_d = -1 * (noise_lr - noise_ll);
 			//fReal noiseDy_u = -1 * (noise_ur - noise_ul) / (radius * gridLen * sin(j * gridLen + gridLen / 2));
 			//fReal noiseDy_d = -1 * (noise_lr - noise_ll) / (radius * gridLen * sin(j * gridLen - gridLen / 2));
+			fReal noiseDy_u = -1 * (noise_ur - noise_ul) / (radius * gridLen);
+			fReal noiseDy_d = -1 * (noise_lr - noise_ll) / (radius * gridLen);
 			fReal avgNoise = (noiseDy_u + noiseDy_d) / 2.0;
-			v->setCPUValueAt(i, j, avgNoise);
+			v->setCPUValueAt(i, j, avgNoise * gain);
 		}
 	}
 	copyVelocity2GPU();
@@ -83,17 +86,19 @@ void KaminoSolver::initialize_velocity()
 
 fReal KaminoSolver::FBM(const fReal x, const fReal y) {
 	fReal total = 0.0f;
-	fReal resolution = 1.0;
+	fReal resolutionX = 0.15;
+	fReal resolutionY = 0.5;
 	fReal persistance = 0.5;
 	int octaves = 4;
 
 	for (int i = 0; i < octaves; i++) {
 		fReal freq = std::pow(2.0f, i);
 		fReal amp = std::pow(persistance, i);
-		total += amp * interpNoise2D(x * freq / resolution, y * freq / resolution);
+		total += amp * interpNoise2D(x * freq / resolutionX, y * freq / resolutionY);
 	}
+	fReal a = 1 - persistance;  // normalization
 
-	return 2560 * total / nTheta;
+	return a * total / 2.0f;  // normalized, pseudorandom number betwee
 }
 
 fReal kaminoLerpHost(fReal from, fReal to, fReal alpha)

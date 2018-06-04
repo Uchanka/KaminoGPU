@@ -85,6 +85,7 @@
   <ItemGroup>
     <ClInclude Include="include\KaminoGPU.cuh" />
     <ClInclude Include="include\KaminoHeader.cuh" />
+    <ClInclude Include="include\KaminoParticles.cuh" />
     <ClInclude Include="include\KaminoQuantity.cuh" />
     <ClInclude Include="include\KaminoSolver.cuh" />
     <ClInclude Include="include\vectorUtil.cuh" />
@@ -94,6 +95,7 @@
     <CudaCompile Include="kernel\KaminoGeometric.cu" />
     <CudaCompile Include="kernel\KaminoGPU.cu" />
     <CudaCompile Include="kernel\KaminoInitializer.cu" />
+    <CudaCompile Include="kernel\KaminoParticles.cu" />
     <CudaCompile Include="kernel\KaminoProjection.cu" />
     <CudaCompile Include="kernel\KaminoQuantity.cu" />
     <CudaCompile Include="kernel\KaminoSolver.cu" />

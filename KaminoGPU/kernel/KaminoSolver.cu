@@ -244,14 +244,19 @@ void KaminoSolver::initDensityfromPic(std::string path)
 		for (size_t j = 0; j < nTheta; ++j)
 		{
 			cv::Point3_<uchar>* p = image_Resized.ptr<cv::Point3_<uchar>>(j, i);
-			fReal B = p->x / 255.0; // B
-			fReal G = p->y / 255.0; // G
-			fReal R = p->z / 255.0; // R
+			fReal B = p->x; // B
+			fReal G = p->y; // G
+			fReal R = p->z; // R
 			this->density->setCPUValueAt(i, j, (B + G + R) / 3.0);
 		}
 	}
 
 	this->density->copyToGPU();
+}
+
+void KaminoSolver::initParticlesfromPic(std::string path, size_t parPerGrid)
+{
+	this->particles = new KaminoParticles(path, parPerGrid, nTheta);
 }
 
 void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
@@ -322,6 +327,46 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 				v[k] = vel[k];
 			}
 			d[0] = densityValuefloat;
+		}
+	}
+
+	Partio::write(file.c_str(), *parts);
+	parts->release();
+}
+
+void KaminoSolver::write_particles_bgeo(const std::string& s, const int frame)
+{
+	std::string file = s + std::to_string(frame) + ".bgeo";
+	std::cout << "Writing to: " << file << std::endl;
+
+	Partio::ParticlesDataMutable* parts = Partio::create();
+	Partio::ParticleAttribute pH, colorVal;
+	pH = parts->addAttribute("position", Partio::VECTOR, 3);
+	colorVal = parts->addAttribute("color", Partio::VECTOR, 3);
+
+	vec3 pos;
+	vec3 col;
+
+	this->particles->copyBack2CPU();
+
+	for (size_t i = 0; i < particles->numOfParticles; ++i)
+	{
+		pos = vec3(particles->coordCPUBuffer[2 * i],
+			particles->coordCPUBuffer[2 * i + 1], 0.0);
+		mapPToSphere(pos);
+
+		col = vec3(particles->colorBGR[3 * i + 1],
+			particles->colorBGR[3 * i + 2],
+			particles->colorBGR[3 * i + 3]);
+
+		int idx = parts->addParticle();
+		float* p = parts->dataWrite<float>(pH, idx);
+		float* c = parts->dataWrite<float>(colorVal, idx);
+	
+		for (int k = 0; k < 3; ++k)
+		{
+			p[k] = pos[k];
+			c[k] = col[k];
 		}
 	}
 
