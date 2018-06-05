@@ -13,7 +13,7 @@ static __constant__ fReal gridLenGlobalAdv;
 __device__ fReal validateCoord(fReal& phi, fReal& theta)
 {
 	fReal ret = 1.0f;
-	theta = theta - static_cast<int>(floorf(theta / M_2PI));
+	theta = theta - static_cast<int>(floorf(theta / M_2PI)) * M_2PI;
 	if (theta > M_PI)
 	{
 		theta = M_2PI - theta;
@@ -26,7 +26,7 @@ __device__ fReal validateCoord(fReal& phi, fReal& theta)
 		phi += M_PI;
 		ret = -ret;
 	}
-	phi = phi - static_cast<int>(floorf(phi / M_2PI));
+	phi = phi - static_cast<int>(floorf(phi / M_2PI)) * M_2PI;
 	return ret;
 }
 
@@ -380,6 +380,84 @@ void KaminoSolver::advection()
 		velPhi->getNextStepPitchInElements());
 	particles->swapGPUBuffers();*/
 # endif
+
+	swapVelocityBuffers();
+}
+
+
+static __constant__ size_t nPhiGlobalGeo;
+static __constant__ size_t nThetaGlobalGeo;
+static __constant__ fReal radiusGlobalGeo;
+static __constant__ fReal timeStepGlobalGeo;
+static __constant__ fReal gridLenGlobalGeo;
+
+__global__ void geometricPhi(fReal* velPhiOutput, fReal* velPhiInput, fReal* velThetaInput,
+	size_t nPitchInElements)
+{
+	// Index
+	int splitVal = nPhiGlobalGeo / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
+
+	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLenGlobalGeo;
+	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobalGeo;
+	fReal uPhi = sampleVPhi(velPhiInput, gPhi, gTheta, nPitchInElements);
+	fReal uTheta = sampleVTheta(velThetaInput, gPhi, gTheta, nPitchInElements);
+
+	fReal uPhiPrev = velPhiInput[phiId + thetaId * nPitchInElements];
+	fReal deltauPhi = -timeStepGlobalGeo * uTheta * uPhi * cosf(gTheta) / (radiusGlobalGeo * sinf(gTheta));
+	velPhiOutput[phiId + thetaId * nPitchInElements] = deltauPhi + uPhiPrev;
+}
+
+__global__ void geometricTheta(fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
+	size_t nPitchInElements)
+{
+	// Index
+	int splitVal = nPhiGlobalGeo / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
+
+	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLenGlobalGeo;
+	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobalGeo;
+	fReal uPhi = sampleVPhi(velPhiInput, gPhi, gTheta, nPitchInElements);
+	fReal uTheta = sampleVTheta(velThetaInput, gPhi, gTheta, nPitchInElements);
+
+	fReal uThetaPrev = velThetaInput[phiId + thetaId * nPitchInElements];
+	fReal deltauTheta = timeStepGlobalGeo * uPhi * uPhi * cosf(gTheta) / (radiusGlobalGeo * sinf(gTheta));
+	velThetaOutput[phiId + thetaId * nPitchInElements] = deltauTheta + uThetaPrev;
+}
+
+void KaminoSolver::geometric()
+{
+	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobalGeo, &(this->nPhi), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobalGeo, &(this->nTheta), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobalGeo, &(this->radius), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobalGeo, &(this->timeStep), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobalGeo, &(this->gridLen), sizeof(fReal)));
+
+
+
+	dim3 gridLayout;
+	dim3 blockLayout;
+	determineLayout(gridLayout, blockLayout, velPhi->getNTheta(), velPhi->getNPhi());
+	geometricPhi<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
+		velPhi->getNextStepPitchInElements());
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
+
+	determineLayout(gridLayout, blockLayout, velTheta->getNTheta(), velTheta->getNPhi());
+	geometricTheta<<<gridLayout, blockLayout>>>
+	(velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
+		velTheta->getNextStepPitchInElements());
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
 
 	swapVelocityBuffers();
 }
