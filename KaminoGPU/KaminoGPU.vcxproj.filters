@@ -44,9 +44,6 @@
     <CudaCompile Include="kernel\KaminoSolver.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="kernel\KaminoGeometric.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="kernel\KaminoInitializer.cu">
       <Filter>kernel</Filter>
     </CudaCompile>

@@ -92,7 +92,6 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\KaminoAdvection.cu" />
-    <CudaCompile Include="kernel\KaminoGeometric.cu" />
     <CudaCompile Include="kernel\KaminoGPU.cu" />
     <CudaCompile Include="kernel\KaminoInitializer.cu" />
     <CudaCompile Include="kernel\KaminoParticles.cu" />
