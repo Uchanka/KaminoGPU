@@ -22,6 +22,12 @@ void Kamino::run()
 	solver.initDensityfromPic(densityImage);
 	//solver.initParticlesfromPic(colorImage, this->particleDensity);
 	
+	cudaEvent_t start, stop;
+	float gpu_time = 0.0f;
+	checkCudaErrors(cudaEventCreate(&start));
+	checkCudaErrors(cudaEventCreate(&stop));
+	cudaEventRecord(start, 0);
+
 # ifdef WRITE_BGEO
 	solver.write_data_bgeo(gridPath, 0);
 	//solver.write_particles_bgeo(particlePath, 0);
@@ -44,4 +50,14 @@ void Kamino::run()
 		//solver.write_particles_bgeo(particlePath, i);
 # endif
 	}
+
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+
+
+	checkCudaErrors(cudaEventElapsedTime(&gpu_time, start, stop));
+	std::cout << "Time spent: " << gpu_time << "ms" << std::endl;
+	std::cout << "Performance: " << 1000.0 * frames / gpu_time << " steps per second" << std::endl;
+	cudaEventDestroy(start);
+	cudaEventDestroy(stop);
 }

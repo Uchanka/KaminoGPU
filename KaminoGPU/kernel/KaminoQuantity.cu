@@ -1,19 +1,5 @@
 # include "../include/KaminoQuantity.cuh"
 
-void KaminoQuantity::bindTexture(table2D* tex)
-{
-	cudaChannelFormatDesc channelFormat
-		= cudaCreateChannelDesc(sizeof(fReal) * byte2Bits, 0, 0, 0, cudaChannelFormatKindFloat);
-
-	checkCudaErrors(cudaBindTexture2D(0, tex, gpuThisStep, &channelFormat,
-		nPhi, nTheta, thisStepPitch));
-}
-
-void KaminoQuantity::unbindTexture(table2D* tex)
-{
-	checkCudaErrors(cudaUnbindTexture(tex));
-}
-
 void KaminoQuantity::copyToGPU()
 {
 	/* 

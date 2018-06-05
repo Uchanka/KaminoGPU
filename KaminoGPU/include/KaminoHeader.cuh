@@ -48,8 +48,6 @@
 typedef float fReal;
 typedef cufftComplex ComplexFourier;
 
-typedef texture<fReal, 2, cudaReadModeElementType> table2D;
-
 const size_t byte2Bits = 8;
 
 const fReal density = 1000.0;
@@ -60,4 +58,4 @@ enum gridType { FLUIDGRID, SOLIDGRID };
 
 enum Coord { phi, theta };
 
-# define WRITE_BGEO
+//# define WRITE_BGEO

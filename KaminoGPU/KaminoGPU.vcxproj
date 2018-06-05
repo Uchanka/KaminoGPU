@@ -95,7 +95,6 @@
     <CudaCompile Include="kernel\KaminoGPU.cu" />
     <CudaCompile Include="kernel\KaminoInitializer.cu" />
     <CudaCompile Include="kernel\KaminoParticles.cu" />
-    <CudaCompile Include="kernel\KaminoProjection.cu" />
     <CudaCompile Include="kernel\KaminoQuantity.cu" />
     <CudaCompile Include="kernel\KaminoSolver.cu" />
     <CudaCompile Include="kernel\main.cu" />

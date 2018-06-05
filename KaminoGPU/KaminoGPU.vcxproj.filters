@@ -32,12 +32,6 @@
     <CudaCompile Include="kernel\tdm.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="kernel\KaminoAdvection.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
-    <CudaCompile Include="kernel\KaminoProjection.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="kernel\KaminoQuantity.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
@@ -57,6 +51,9 @@
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoParticles.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoAdvection.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>

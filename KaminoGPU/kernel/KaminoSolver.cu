@@ -90,14 +90,6 @@ KaminoSolver::~KaminoSolver()
 	//delete this->particles;
 }
 
-void KaminoSolver::setTextureParams(table2D* tex)
-{
-	tex->addressMode[0] = cudaAddressModeWrap;
-	tex->addressMode[1] = cudaAddressModeMirror;
-	tex->filterMode = cudaFilterModeLinear;
-	tex->normalized = true;
-}
-
 void KaminoSolver::copyVelocity2GPU()
 {
 	velPhi->copyToGPU();

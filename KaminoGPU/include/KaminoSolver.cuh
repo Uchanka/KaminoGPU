@@ -81,9 +81,7 @@ private:
 
 	void mapPToSphere(vec3& pos) const;
 	void mapVToSphere(vec3& pos, vec3& vel) const;
-	/* Convert to texture */
-	void setTextureParams(table2D* tex);
-
+	
 	/* FBM noise function for velocity distribution */
 	fReal FBM(const fReal x, const fReal y);
 	/* 2D noise interpolation function for smooth FBM noise */
