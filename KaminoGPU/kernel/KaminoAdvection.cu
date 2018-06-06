@@ -380,7 +380,7 @@ void KaminoSolver::advection()
 	swapVelocityBuffers();
 }
 
-__global__ void geometricPhi(fReal* velPhiOutput, fReal* velPhiInput, fReal* velThetaInput,
+/*__global__ void geometricPhi(fReal* velPhiOutput, fReal* velPhiInput, fReal* velThetaInput,
 	size_t nPitchInElements)
 {
 	// Index
@@ -416,25 +416,194 @@ __global__ void geometricTheta(fReal* velThetaOutput, fReal* velPhiInput, fReal*
 	fReal uThetaPrev = velThetaInput[phiId + thetaId * nPitchInElements];
 	fReal deltauTheta = timeStepGlobal * uPhi * uPhi * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
 	velThetaOutput[phiId + thetaId * nPitchInElements] = deltauTheta + uThetaPrev;
+}*/
+
+__device__ fReal _root3(fReal x)
+{
+	fReal s = 1.;
+	while (x < 1.)
+	{
+		x *= 8.;
+		s *= 0.5;
+	}
+	while (x > 8.)
+	{
+		x *= 0.125;
+		s *= 2.;
+	}
+	fReal r = 1.5;
+	r -= 1. / 3. * (r - x / (r * r));
+	r -= 1. / 3. * (r - x / (r * r));
+	r -= 1. / 3. * (r - x / (r * r));
+	r -= 1. / 3. * (r - x / (r * r));
+	r -= 1. / 3. * (r - x / (r * r));
+	r -= 1. / 3. * (r - x / (r * r));
+	return r * s;
+}
+
+__device__ fReal root3(double x)
+{
+	if (x > 0)
+		return _root3(x);
+	else if (x < 0)
+		return -_root3(-x);
+	else
+		return 0.0;
+}
+
+#define eps 1e-7f
+
+__device__ fReal solveCubic(fReal a, fReal b, fReal c)
+{
+	fReal a2 = a * a;
+	fReal q = (a2 - 3 * b) / 9.0;
+	//q = q >= 0.0 ? q : -q;
+	fReal r = (a * (2.0 * a2 - 9.0 * b) + 27.0 * c) / 54.0;
+
+	fReal r2 = r * r;
+	fReal q3 = q * q * q;
+	fReal A, B;
+	if (r2 <= (q3 + eps))
+	{
+		double t = r / sqrtf(q3);
+		if (t < -1)
+			t = -1;
+		if (t > 1)
+			t = 1;
+		t = acosf(t);
+		a /= 3.0;
+		q = -2.0 * sqrtf(q);
+		return q * cosf(t / 3.0) - a;
+	}
+	else
+	{
+		A = -root3(fabsf(r) + sqrtf(r2 - q3));
+		if (r < 0)
+			A = -A;
+
+		B = A == 0 ? 0 : B = q / A;
+
+		a /= 3.0;
+		return (A + B) - a;
+	}
+}
+
+//nTheta by nPhi
+__global__ void geometricFillKernel
+(fReal* intermediateOutputPhi, fReal* intermediateOutputTheta, fReal* velPhiInput, fReal* velThetaInput,
+	size_t nPitchInElements)
+{
+	// Index
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int gridPhiId = threadIdx.x + threadSequence * blockDim.x;
+	int gridThetaId = blockIdx.x / splitVal;
+	// Coord in phi-theta space
+	fReal gTheta = ((fReal)gridThetaId + centeredThetaOffset) * gridLenGlobal;
+	// The factor
+	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
+
+	size_t phiLeft = gridPhiId;
+	size_t phiRight = (gridPhiId + 1) % nPhiGlobal;
+	fReal uPrev = 0.5 * (velPhiInput[phiLeft + nPitchInElements * gridThetaId]
+		+ velPhiInput[phiRight + nPitchInElements * gridThetaId]);
+
+	fReal vPrev;
+	if (gridThetaId == 0 || gridThetaId == nThetaGlobal - 1)
+	{
+		size_t oppositePhiIdx = (gridPhiId + nPhiGlobal / 2) % nPhiGlobal;
+		vPrev = 0.75 * velThetaInput[gridPhiId + nPitchInElements * gridThetaId]
+			+ 0.25 * velThetaInput[oppositePhiIdx + nPitchInElements * gridThetaId];
+	}
+	else
+	{
+		vPrev = 0.5 * (velThetaInput[gridPhiId + nPitchInElements * (gridThetaId - 1)]
+			+ velThetaInput[gridPhiId + nPitchInElements * gridThetaId]);
+	}
+
+	fReal G = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
+	fReal uNext;
+	if (abs(G) > eps)
+	{
+		fReal cof = G * G;
+		fReal A = 0.0;
+		fReal B = (G * vPrev + 1.0) / cof;
+		fReal C = -uPrev / cof;
+
+		uNext = solveCubic(A, B, C);
+	}
+	else
+	{
+		uNext = uPrev;
+	}
+
+	fReal vNext = vPrev + G * uNext * uNext;
+
+	intermediateOutputPhi[gridPhiId + nPitchInElements * gridThetaId] = uNext;
+	intermediateOutputTheta[gridPhiId + nPitchInElements * gridThetaId] = vNext;
+}
+
+//nTheta by nPhi
+__global__ void assignPhiKernel(fReal* velPhiOutput, fReal* intermediateInputPhi,
+	size_t nPitchInElements)
+{
+	// Index
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
+
+	size_t phigridLeft;
+	if (phiId == 0)
+		phigridLeft = nPhiGlobal - 1;
+	else
+		phigridLeft = phiId - 1;
+	velPhiOutput[phiId + nPitchInElements * thetaId] =
+		0.5 * (intermediateInputPhi[phigridLeft + nPitchInElements * thetaId]
+			+ intermediateInputPhi[phiId + nPitchInElements * thetaId]);
+}
+
+//nTheta - 1 by nPhi
+__global__ void assignThetaKernel(fReal* velThetaOutput, fReal*intermediateInputTheta,
+	size_t nPitchInElements)
+{
+	// Index
+	int splitVal = nPhiGlobal / blockDim.x;
+	int threadSequence = blockIdx.x % splitVal;
+	int phiId = threadIdx.x + threadSequence * blockDim.x;
+	int thetaId = blockIdx.x / splitVal;
+
+	velThetaOutput[phiId + nPitchInElements * thetaId] =
+		0.5 * (intermediateInputTheta[phiId + nPitchInElements * thetaId]
+			+ intermediateInputTheta[phiId + nPitchInElements * (thetaId + 1)]);
 }
 
 void KaminoSolver::geometric()
 {
 	dim3 gridLayout;
 	dim3 blockLayout;
+	//intermediate: pressure.this as phi, next as theta
+
+	determineLayout(gridLayout, blockLayout, nTheta, nPhi);
+	geometricFillKernel<<<gridLayout, blockLayout>>>
+	(pressure->getGPUThisStep(), pressure->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
+		pressure->getNextStepPitchInElements());
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
+
 	determineLayout(gridLayout, blockLayout, velPhi->getNTheta(), velPhi->getNPhi());
-	geometricPhi<<<gridLayout, blockLayout>>>
-	(velPhi->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
-		velPhi->getNextStepPitchInElements());
+	assignPhiKernel<<<gridLayout, blockLayout>>>
+	(velPhi->getGPUNextStep(), pressure->getGPUThisStep(), velPhi->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 
 
 	determineLayout(gridLayout, blockLayout, velTheta->getNTheta(), velTheta->getNPhi());
-	geometricTheta<<<gridLayout, blockLayout>>>
-	(velTheta->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
-		velTheta->getNextStepPitchInElements());
+	assignThetaKernel<<<gridLayout, blockLayout>>>
+	(velTheta->getGPUNextStep(), pressure->getGPUNextStep(), velTheta->getNextStepPitchInElements());
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
