@@ -333,14 +333,6 @@ __global__ void advectionParticles(fReal* output, fReal* velPhi, fReal* velTheta
 
 void KaminoSolver::advection()
 {
-	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
-	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
-	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobal, &(this->radius), sizeof(fReal)));
-	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, &(this->timeStep), sizeof(fReal)));
-	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
-	
-
-
 	///kernel call goes here
 	// Advect Phi
 	dim3 gridLayout;
@@ -700,4 +692,131 @@ void KaminoSolver::projection()
 	checkCudaErrors(cudaDeviceSynchronize());
 
 	swapVelocityBuffers();
+}
+
+__global__ void precomputeABCKernel
+(fReal* A, fReal* B, fReal* C)
+{
+	int splitVal = nThetaGlobal / blockDim.x;
+	int nIndex = blockIdx.x / splitVal;
+	int threadSequence = blockIdx.x % splitVal;
+
+	int i = threadIdx.x + threadSequence * blockDim.x;
+	int n = nIndex - nPhiGlobal / 2;
+
+	int index = nIndex * nThetaGlobal + i;
+	fReal thetaI = (i + centeredThetaOffset) * gridLenGlobal;
+
+	fReal cosThetaI = cosf(thetaI);
+	fReal sinThetaI = sinf(thetaI);
+
+	fReal valB = -2.0 / (gridLenGlobal * gridLenGlobal)
+		- n * n / (sinThetaI * sinThetaI);
+	fReal valA = 1.0 / (gridLenGlobal * gridLenGlobal)
+		- cosThetaI / 2.0 / gridLenGlobal / sinThetaI;
+	fReal valC = 1.0 / (gridLenGlobal * gridLenGlobal)
+		+ cosThetaI / 2.0 / gridLenGlobal / sinThetaI;
+	if (n != 0)
+	{
+		if (i == 0)
+		{
+			fReal coef = powf(-1.0, n);
+			valB += valA;
+			valA = 0.0;
+		}
+		if (i == nThetaGlobal - 1)
+		{
+			fReal coef = powf(-1.0, n);
+			valB += valC;
+			valC = 0.0;
+		}
+	}
+	else
+	{
+		valA = 0.0;
+		valB = 1.0;
+		valC = 0.0;
+	}
+	A[index] = valA;
+	B[index] = valB;
+	C[index] = valC;
+}
+
+void KaminoSolver::precomputeABCCoef()
+{
+	dim3 gridLayout;
+	dim3 blockLayout;
+	determineLayout(gridLayout, blockLayout, nPhi, nTheta);
+	precomputeABCKernel << <gridLayout, blockLayout >> >
+		(this->gpuA, this->gpuB, this->gpuC);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+}
+
+KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
+	fReal A, int B, int C, int D, int E) :
+	nPhi(nPhi), nTheta(nTheta), radius(radius), gridLen(M_2PI / nPhi), invGridLen(1.0 / gridLen), frameDuration(frameDuration),
+	timeStep(0.0), timeElapsed(0.0),
+	A(A), B(B), C(C), D(D), E(E)
+{
+	/// FIXME: Should we detect and use device 0?
+	/// Replace it later with functions from helper_cuda.h!
+	checkCudaErrors(cudaSetDevice(0));
+
+	cudaDeviceProp deviceProp;
+	checkCudaErrors(cudaGetDeviceProperties(&deviceProp, 0));
+	this->nThreadxMax = deviceProp.maxThreadsDim[0];
+
+
+
+	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
+	checkCudaErrors(cudaMemcpyToSymbol(radiusGlobal, &(this->radius), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, &(this->timeStep), sizeof(fReal)));
+	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
+
+
+
+	checkCudaErrors(cudaMalloc((void **)&gpuUFourier,
+		sizeof(ComplexFourier) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuUReal,
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuUImag,
+		sizeof(fReal) * nPhi * nTheta));
+
+	checkCudaErrors(cudaMalloc((void **)&gpuFFourier,
+		sizeof(ComplexFourier) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuFReal,
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)&gpuFImag,
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void**)&gpuFZeroComponent,
+		sizeof(fReal) * nTheta));
+
+	checkCudaErrors(cudaMalloc((void **)(&gpuA),
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)(&gpuB),
+		sizeof(fReal) * nPhi * nTheta));
+	checkCudaErrors(cudaMalloc((void **)(&gpuC),
+		sizeof(fReal) * nPhi * nTheta));
+	precomputeABCCoef();
+
+	this->velPhi = new KaminoQuantity("velPhi", nPhi, nTheta,
+		vPhiPhiOffset, vPhiThetaOffset);
+	this->velTheta = new KaminoQuantity("velTheta", nPhi, nTheta - 1,
+		vThetaPhiOffset, vThetaThetaOffset);
+	this->pressure = new KaminoQuantity("p", nPhi, nTheta,
+		centeredPhiOffset, centeredThetaOffset);
+	this->density = new KaminoQuantity("density", nPhi, nTheta,
+		centeredPhiOffset, centeredThetaOffset);
+
+	initialize_velocity();
+
+	int sigLenArr[1];
+	sigLenArr[0] = nPhi;
+	const int fftRank = 1;
+	checkCudaErrors((cudaError_t)cufftPlanMany(&kaminoPlan, fftRank, sigLenArr,
+		NULL, 1, nPhi,
+		NULL, 1, nPhi,
+		CUFFT_C2C, nTheta));
 }
