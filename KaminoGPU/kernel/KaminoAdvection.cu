@@ -205,6 +205,7 @@ __global__ void advectionVPhiKernel
 	fReal deltaPhi = guPhi * cofPhi;
 	fReal deltaTheta = guTheta * cofTheta;
 
+# ifdef RUNGE_KUTTA
 	// Traced halfway in phi-theta space
 	fReal midPhi = gPhi - 0.5 * deltaPhi;
 	fReal midTheta = gTheta - 0.5 * deltaTheta;
@@ -216,6 +217,7 @@ __global__ void advectionVPhiKernel
 
 	deltaPhi = averuPhi * cofPhi;
 	deltaTheta = averuTheta * cofTheta;
+# endif
 
 	fReal pPhi = gPhi - deltaPhi;
 	fReal pTheta = gTheta - deltaTheta;
@@ -248,6 +250,7 @@ __global__ void advectionVThetaKernel
 	fReal deltaPhi = guPhi * cofPhi;
 	fReal deltaTheta = guTheta * cofTheta;
 
+# ifdef RUNGE_KUTTA
 	// Traced halfway in phi-theta space
 	fReal midPhi = gPhi - 0.5 * deltaPhi;
 	fReal midTheta = gTheta - 0.5 * deltaTheta;
@@ -259,6 +262,8 @@ __global__ void advectionVThetaKernel
 
 	deltaPhi = averuPhi * cofPhi;
 	deltaTheta = averuTheta * cofTheta;
+# endif
+
 	fReal pPhi = gPhi - deltaPhi;
 	fReal pTheta = gTheta - deltaTheta;
 
@@ -290,6 +295,7 @@ __global__ void advectionCentered
 	fReal deltaPhi = guPhi * cofPhi;
 	fReal deltaTheta = guTheta * cofTheta;
 
+# ifdef RUNGE_KUTTA
 	// Traced halfway in phi-theta space
 	fReal midPhi = gPhi - 0.5 * deltaPhi;
 	fReal midTheta = gTheta - 0.5 * deltaTheta;
@@ -301,6 +307,8 @@ __global__ void advectionCentered
 
 	deltaPhi = averuPhi * cofPhi;
 	deltaTheta = averuTheta * cofTheta;
+# endif
+
 	fReal pPhi = gPhi - deltaPhi;
 	fReal pTheta = gTheta - deltaTheta;
 

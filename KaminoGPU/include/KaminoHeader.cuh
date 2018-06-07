@@ -59,3 +59,4 @@ enum gridType { FLUIDGRID, SOLIDGRID };
 enum Coord { phi, theta };
 
 //# define WRITE_BGEO
+//# define RUNGE_KUTTA
