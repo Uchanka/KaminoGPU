@@ -501,7 +501,6 @@ __global__ void geometricFillKernel
 	// Coord in phi-theta space
 	fReal gTheta = ((fReal)gridThetaId + centeredThetaOffset) * gridLenGlobal;
 	// The factor
-	fReal factor = timeStepGlobal * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
 
 	size_t phiLeft = gridPhiId;
 	size_t phiRight = (gridPhiId + 1) % nPhiGlobal;
@@ -509,11 +508,17 @@ __global__ void geometricFillKernel
 		+ velPhiInput[phiRight + nPitchInElements * gridThetaId]);
 
 	fReal vPrev;
-	if (gridThetaId == 0 || gridThetaId == nThetaGlobal - 1)
+	if (gridThetaId == 0)
 	{
 		size_t oppositePhiIdx = (gridPhiId + nPhiGlobal / 2) % nPhiGlobal;
-		vPrev = 0.75 * velThetaInput[gridPhiId + nPitchInElements * gridThetaId]
-			+ 0.25 * velThetaInput[oppositePhiIdx + nPitchInElements * gridThetaId];
+		vPrev = 0.75 * velThetaInput[gridPhiId]
+			+ 0.25 * velThetaInput[oppositePhiIdx];
+	}
+	else if (gridThetaId == nThetaGlobal - 1)
+	{
+		size_t oppositePhiIdx = (gridPhiId + nPhiGlobal / 2) % nPhiGlobal;
+		vPrev = 0.75 * velThetaInput[gridPhiId + nPitchInElements * (gridThetaId - 1)]
+			+ 0.25 * velThetaInput[oppositePhiIdx + nPitchInElements * (gridThetaId - 1)];
 	}
 	else
 	{
