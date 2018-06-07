@@ -16,7 +16,8 @@ public:
 	fReal* coordGPUThisStep;
 	fReal* coordGPUNextStep;
 
-	KaminoParticles(std::string path, size_t particlePGrid, size_t nTheta);
+	KaminoParticles(std::string path, fReal particleDensity, fReal gridLen, size_t nTheta);
+	~KaminoParticles();
 
 	void copy2GPU();
 	void copyBack2CPU();

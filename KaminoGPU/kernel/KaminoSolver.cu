@@ -250,7 +250,7 @@ void KaminoSolver::initDensityfromPic(std::string path)
 
 void KaminoSolver::initParticlesfromPic(std::string path, size_t parPerGrid)
 {
-	//this->particles = new KaminoParticles(path, parPerGrid, nTheta);
+	this->particles = new KaminoParticles(path, parPerGrid, gridLen, nTheta);
 }
 
 void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
@@ -328,17 +328,19 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	parts->release();
 }
 
-/*void KaminoSolver::write_particles_bgeo(const std::string& s, const int frame)
+void KaminoSolver::write_particles_bgeo(const std::string& s, const int frame)
 {
 	std::string file = s + std::to_string(frame) + ".bgeo";
 	std::cout << "Writing to: " << file << std::endl;
 
 	Partio::ParticlesDataMutable* parts = Partio::create();
-	Partio::ParticleAttribute pH, colorVal;
+	Partio::ParticleAttribute pH, vH, colorVal;
 	pH = parts->addAttribute("position", Partio::VECTOR, 3);
+	vH = parts->addAttribute("v", Partio::VECTOR, 3);
 	colorVal = parts->addAttribute("color", Partio::VECTOR, 3);
 
 	vec3 pos;
+	vec3 vel;
 	vec3 col;
 
 	this->particles->copyBack2CPU();
@@ -355,18 +357,20 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 
 		int idx = parts->addParticle();
 		float* p = parts->dataWrite<float>(pH, idx);
+		float* v = parts->dataWrite<float>(vH, idx);
 		float* c = parts->dataWrite<float>(colorVal, idx);
 	
 		for (int k = 0; k < 3; ++k)
 		{
 			p[k] = pos[k];
+			v[k] = 0.0;
 			c[k] = col[k];
 		}
 	}
 
 	Partio::write(file.c_str(), *parts);
 	parts->release();
-}*/
+}
 
 void KaminoSolver::mapPToSphere(vec3& pos) const
 {

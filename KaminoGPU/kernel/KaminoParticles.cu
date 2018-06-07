@@ -1,6 +1,6 @@
 # include "../include/KaminoParticles.cuh"
 
-KaminoParticles::KaminoParticles(std::string path, size_t particlePGrid, size_t nTheta)
+KaminoParticles::KaminoParticles(std::string path, fReal particleDensity, fReal gridLen, size_t nTheta)
 	: particlePGrid(particlePGrid), nPhi(2 * nTheta), nTheta(nTheta)
 {
 	if (path == "")
@@ -22,51 +22,81 @@ KaminoParticles::KaminoParticles(std::string path, size_t particlePGrid, size_t 
 	cv::Size size(nPhi, nTheta);
 	cv::resize(image_Flipped, image_Resized, size);
 
-	numOfParticles = nPhi * nTheta * particlePGrid;
-	coordCPUBuffer = new fReal[numOfParticles * 2];
-	colorBGR = new fReal[numOfParticles * 3];
+	fReal linearDensity = sqrt(particleDensity);
+	fReal delta = M_PI / nTheta / linearDensity;
+	fReal halfDelta = delta / 2.0;
+
+	unsigned int numThetaParticles = linearDensity * nTheta;
+	unsigned int numPhiParticles = 2 * numThetaParticles;
+	numOfParticles = numThetaParticles * numPhiParticles;
 
 	checkCudaErrors(cudaMalloc(&coordGPUThisStep, sizeof(fReal) * numOfParticles * 2));
 	checkCudaErrors(cudaMalloc(&coordGPUNextStep, sizeof(fReal) * numOfParticles * 2));
+	coordCPUBuffer = new fReal[numOfParticles * 2];
+	colorBGR = new fReal[numOfParticles * 3];
 
-	for (size_t phi = 0; phi < nPhi; ++phi)
+	for (unsigned int i = 0; i < numPhiParticles; ++i)
 	{
-		for (size_t theta = 0; theta < nTheta; ++theta)
+		for (unsigned int j = 0; j < numThetaParticles; ++j)
 		{
-			cv::Point3_<uchar>* p = image_Resized.ptr<cv::Point3_<uchar>>(theta, phi);
-			fReal B = p->x / 255.0; // B
-			fReal G = p->y / 255.0; // G
-			fReal R = p->z / 255.0; // R
-			for (size_t part = 0; part < particlePGrid; ++part)
-			{
-				fReal phiCenter = static_cast<fReal>(phi) + 0.5 * (1.0 + std::sinf(rand() / 1000.0));
-				fReal thetaCenter = static_cast<fReal>(theta) + 0.5 * (1.0 + std::cosf(rand() / 1000.0));
-				fReal phiCoord = phiCenter * M_2PI / nPhi;
-				fReal thetaCoord = thetaCenter * M_PI / nTheta;
+			// distribute in phi and theta randomly
+			// +/- is 50/50
+			fReal signPhi = static_cast <fReal> (rand()) / static_cast <fReal> (RAND_MAX);
+			signPhi = signPhi >= 0.5 ? 1.0 : -1.0;
+			fReal signTheta = static_cast <fReal> (rand()) / static_cast <fReal> (RAND_MAX);
+			signTheta = signTheta >= 0.5 ? 1.0 : -1.0;
 
-				coordCPUBuffer[2 * (theta * nPhi + phi)] = phiCoord;
-				coordCPUBuffer[2 * (theta * nPhi + phi) + 1] = thetaCoord;
+			// get random value between 0 and halfDelta in +/- direction
+			fReal randPhi = signPhi * halfDelta * static_cast <fReal> (rand()) / static_cast <fReal> (RAND_MAX);
+			fReal randTheta = signTheta * halfDelta * static_cast <fReal> (rand()) / static_cast <fReal> (RAND_MAX);
 
-				colorBGR[3 * (theta * nPhi + phi)] = B;
-				colorBGR[3 * (theta * nPhi + phi) + 1] = G;
-				colorBGR[3 * (theta * nPhi + phi) + 2] = R;
-			}
+			// assign positions (phi, theta)
+			fReal phi = i * delta + randPhi;
+			fReal theta = j * delta + randTheta;
+			if (phi < 0.0)
+				phi = 0.0;
+			if (theta < 0.0)
+				theta = 0.0;
+
+			size_t x = std::floor(phi / gridLen);
+			size_t y = std::floor(theta / gridLen);
+			
+			size_t index = i * numThetaParticles + j;
+			// set particle position
+			coordCPUBuffer[2 * index] = phi;
+			coordCPUBuffer[2 * index + 1] = theta;
+			
+			// initialize velocities (0,0)
+			cv::Point3_<uchar>* p = image_Flipped.ptr<cv::Point3_<uchar>>(y, x);
+			// define particle color
+			colorBGR[3 * index] = p->z / 255.0;
+			colorBGR[3 * index + 1] = p->y / 255.0;
+			colorBGR[3 * index + 2] = p->x / 255.0;
 		}
 	}
 
 	copy2GPU();
 }
 
+KaminoParticles::~KaminoParticles()
+{
+	delete[] coordCPUBuffer;
+	delete[] colorBGR;
+
+	checkCudaErrors(cudaFree(coordGPUThisStep));
+	checkCudaErrors(cudaFree(coordGPUNextStep));
+}
+
 void KaminoParticles::copy2GPU()
 {
 	checkCudaErrors(cudaMemcpy(this->coordGPUThisStep, this->coordCPUBuffer,
-		sizeof(fReal) * numOfParticles, cudaMemcpyHostToDevice));
+		sizeof(fReal) * numOfParticles * 2, cudaMemcpyHostToDevice));
 }
 
 void KaminoParticles::copyBack2CPU()
 {
 	checkCudaErrors(cudaMemcpy(this->coordCPUBuffer, this->coordGPUThisStep,
-		sizeof(fReal) * numOfParticles, cudaMemcpyDeviceToHost));
+		sizeof(fReal) * numOfParticles * 2, cudaMemcpyDeviceToHost));
 }
 
 void KaminoParticles::swapGPUBuffers()

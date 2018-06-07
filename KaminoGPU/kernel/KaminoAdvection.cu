@@ -371,53 +371,15 @@ void KaminoSolver::advection()
 	
 	density->swapGPUBuffer();
 
-	/*determineLayout(gridLayout, blockLayout, 1, particles->numOfParticles);
+	determineLayout(gridLayout, blockLayout, 1, particles->numOfParticles);
 	advectionParticles<<<gridLayout, blockLayout>>>
 	(particles->coordGPUNextStep, velPhi->getGPUThisStep(), velTheta->getGPUThisStep(), particles->coordGPUThisStep,
 		velPhi->getNextStepPitchInElements());
-	particles->swapGPUBuffers();*/
+	particles->swapGPUBuffers();
 # endif
 
 	swapVelocityBuffers();
 }
-
-/*__global__ void geometricPhi(fReal* velPhiOutput, fReal* velPhiInput, fReal* velThetaInput,
-	size_t nPitchInElements)
-{
-	// Index
-	int splitVal = nPhiGlobal / blockDim.x;
-	int threadSequence = blockIdx.x % splitVal;
-	int phiId = threadIdx.x + threadSequence * blockDim.x;
-	int thetaId = blockIdx.x / splitVal;
-
-	fReal gPhi = ((fReal)phiId + vPhiPhiOffset) * gridLenGlobal;
-	fReal gTheta = ((fReal)thetaId + vPhiThetaOffset) * gridLenGlobal;
-	fReal uPhi = sampleVPhi(velPhiInput, gPhi, gTheta, nPitchInElements);
-	fReal uTheta = sampleVTheta(velThetaInput, gPhi, gTheta, nPitchInElements);
-
-	fReal uPhiPrev = velPhiInput[phiId + thetaId * nPitchInElements];
-	fReal deltauPhi = -timeStepGlobal * uTheta * uPhi * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
-	velPhiOutput[phiId + thetaId * nPitchInElements] = deltauPhi + uPhiPrev;
-}
-
-__global__ void geometricTheta(fReal* velThetaOutput, fReal* velPhiInput, fReal* velThetaInput,
-	size_t nPitchInElements)
-{
-	// Index
-	int splitVal = nPhiGlobal / blockDim.x;
-	int threadSequence = blockIdx.x % splitVal;
-	int phiId = threadIdx.x + threadSequence * blockDim.x;
-	int thetaId = blockIdx.x / splitVal;
-
-	fReal gPhi = ((fReal)phiId + vThetaPhiOffset) * gridLenGlobal;
-	fReal gTheta = ((fReal)thetaId + vThetaThetaOffset) * gridLenGlobal;
-	fReal uPhi = sampleVPhi(velPhiInput, gPhi, gTheta, nPitchInElements);
-	fReal uTheta = sampleVTheta(velThetaInput, gPhi, gTheta, nPitchInElements);
-
-	fReal uThetaPrev = velThetaInput[phiId + thetaId * nPitchInElements];
-	fReal deltauTheta = timeStepGlobal * uPhi * uPhi * cosf(gTheta) / (radiusGlobal * sinf(gTheta));
-	velThetaOutput[phiId + thetaId * nPitchInElements] = deltauTheta + uThetaPrev;
-}*/
 
 __device__ fReal _root3(fReal x)
 {
@@ -897,7 +859,7 @@ void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
 	solver.initDensityfromPic(densityImage);
-	//solver.initParticlesfromPic(colorImage, this->particleDensity);
+	solver.initParticlesfromPic(colorImage, this->particleDensity);
 
 	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
 	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
@@ -913,7 +875,7 @@ void Kamino::run()
 
 # ifdef WRITE_BGEO
 	solver.write_data_bgeo(gridPath, 0);
-	//solver.write_particles_bgeo(particlePath, 0);
+	solver.write_particles_bgeo(particlePath, 0);
 # endif
 
 	float T = 0.0;              // simulation time
@@ -930,7 +892,7 @@ void Kamino::run()
 		std::cout << "Frame " << i << " is ready" << std::endl;
 # ifdef WRITE_BGEO
 		solver.write_data_bgeo(gridPath, i);
-		//solver.write_particles_bgeo(particlePath, i);
+		solver.write_particles_bgeo(particlePath, i);
 # endif
 	}
 

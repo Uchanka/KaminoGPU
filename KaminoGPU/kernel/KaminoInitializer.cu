@@ -6,7 +6,7 @@ void KaminoSolver::initialize_velocity()
 	KaminoQuantity* u = this->velPhi;
 	KaminoQuantity* v = this->velTheta;
 
-	fReal gain = 2048.0 / nPhi;
+	fReal gain = 4096.0 * 3.0 / nPhi;
 
 	for (size_t j = 0; j < u->getNTheta(); ++j)
 	{

@@ -103,4 +103,6 @@ public:
 
 	void write_data_bgeo(const std::string& s, const int frame);
 	void write_particles_bgeo(const std::string& s, const int frame);
+
+	KaminoParticles* particles;
 };
