@@ -69,8 +69,8 @@ KaminoParticles::KaminoParticles(std::string path, fReal particleDensity, fReal 
 			// initialize velocities (0,0)
 			cv::Point3_<uchar>* p = image_Flipped.ptr<cv::Point3_<uchar>>(y, x);
 			// define particle color
-			colorBGR[3 * index] = p->z / 255.0;
-			colorBGR[3 * index + 1] = p->y / 255.0;
+			colorBGR[3 * index] = p->y / 255.0;
+			colorBGR[3 * index + 1] = p->z / 255.0;
 			colorBGR[3 * index + 2] = p->x / 255.0;
 		}
 	}
