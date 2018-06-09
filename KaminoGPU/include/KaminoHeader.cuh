@@ -40,7 +40,7 @@
 # define vThetaPhiOffset 0.0
 # define vThetaThetaOffset 1.0
 
-# define getIndex(phi, theta) (theta * this->nPhi + phi)
+//# define getIndex(phi, theta) (theta * this->nPhi + phi)
 
 # define DEBUGBUILD
 

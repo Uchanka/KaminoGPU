@@ -69,7 +69,7 @@ void KaminoQuantity::setCPUValueAt(size_t phi, size_t theta, fReal val)
 
 fReal& KaminoQuantity::accessCPUValueAt(size_t phi, size_t theta)
 {
-	return this->cpuBuffer[getIndex(phi, theta)];
+	return this->cpuBuffer[theta * nPhi + phi];
 }
 
 fReal KaminoQuantity::getThetaOffset()
