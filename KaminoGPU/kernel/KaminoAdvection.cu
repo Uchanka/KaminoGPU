@@ -331,7 +331,7 @@ __global__ void advectionParticles(fReal* output, fReal* velPhi, fReal* velTheta
 	fReal cofTheta = timeStepGlobal / radiusGlobal;
 
 	fReal updatedTheta = posTheta + uTheta * cofTheta;
-	fReal updatedPhi = 0.0;
+	fReal updatedPhi = posPhi;
 	if (latRadius > 1e-7f)
 		updatedPhi = posPhi + uPhi * cofPhi;
 	validateCoord(updatedPhi, updatedTheta);
@@ -363,14 +363,15 @@ void KaminoSolver::advection()
 
 
 
-# ifdef WRITE_BGEO
+# ifdef WRITE_VELOCITY_DATA
 	determineLayout(gridLayout, blockLayout, density->getNTheta(), density->getNPhi());
 	advectionCentered<<<gridLayout, blockLayout>>>
 	(density->getGPUNextStep(), velPhi->getGPUThisStep(), velTheta->getGPUThisStep(),
 		density->getGPUThisStep(), density->getNextStepPitchInElements());
 	
 	density->swapGPUBuffer();
-
+# endif
+# ifdef WRITE_PARTICLES
 	determineLayout(gridLayout, blockLayout, 1, particles->numOfParticles);
 	advectionParticles<<<gridLayout, blockLayout>>>
 	(particles->coordGPUNextStep, velPhi->getGPUThisStep(), velTheta->getGPUThisStep(), particles->coordGPUThisStep,
@@ -873,8 +874,10 @@ void Kamino::run()
 	checkCudaErrors(cudaEventCreate(&stop));
 	cudaEventRecord(start, 0);
 
-# ifdef WRITE_BGEO
+# ifdef WRITE_VELOCITY_DATA
 	solver.write_data_bgeo(gridPath, 0);
+# endif
+# ifdef WRITE_PARTICLES
 	solver.write_particles_bgeo(particlePath, 0);
 # endif
 
@@ -890,8 +893,10 @@ void Kamino::run()
 		T = i*DT;
 
 		std::cout << "Frame " << i << " is ready" << std::endl;
-# ifdef WRITE_BGEO
+# ifdef WRITE_VELOCITY_DATA
 		solver.write_data_bgeo(gridPath, i);
+# endif
+# ifdef WRITE_PARTICLES
 		solver.write_particles_bgeo(particlePath, i);
 # endif
 	}

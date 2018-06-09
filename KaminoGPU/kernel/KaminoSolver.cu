@@ -238,9 +238,9 @@ void KaminoSolver::initDensityfromPic(std::string path)
 		for (size_t j = 0; j < nTheta; ++j)
 		{
 			cv::Point3_<uchar>* p = image_Resized.ptr<cv::Point3_<uchar>>(j, i);
-			fReal B = p->x; // B
-			fReal G = p->y; // G
-			fReal R = p->z; // R
+			fReal B = p->x / 255.0; // B
+			fReal G = p->y / 255.0; // G
+			fReal R = p->z / 255.0; // R
 			this->density->setCPUValueAt(i, j, (B + G + R) / 3.0);
 		}
 	}
@@ -262,7 +262,7 @@ void KaminoSolver::write_data_bgeo(const std::string& s, const int frame)
 	Partio::ParticleAttribute pH, vH, densityVal;
 	pH = parts->addAttribute("position", Partio::VECTOR, 3);
 	vH = parts->addAttribute("v", Partio::VECTOR, 3);
-	densityVal = parts->addAttribute("densityValue", Partio::FLOAT, 1);
+	densityVal = parts->addAttribute("density", Partio::FLOAT, 1);
 
 	vec3 pos;
 	vec3 vel;

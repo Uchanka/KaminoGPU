@@ -3,24 +3,19 @@
 KaminoParticles::KaminoParticles(std::string path, fReal particleDensity, fReal gridLen, size_t nTheta)
 	: particlePGrid(particlePGrid), nPhi(2 * nTheta), nTheta(nTheta)
 {
-	if (path == "")
-	{
-		return;
-	}
-	cv::Mat image_In;
+	cv::Mat image_In, image_Out;
 	image_In = cv::imread(path, cv::IMREAD_COLOR);
 	if (!image_In.data)
 	{
-		std::cerr << "No particle image provided." << std::endl;
-		return;
+		std::cerr << "No particle color image provided." << std::endl;
 	}
-
-	cv::Mat image_Flipped;
-	cv::flip(image_In, image_Flipped, 1);
-
-	cv::Mat image_Resized;
-	cv::Size size(nPhi, nTheta);
-	cv::resize(image_Flipped, image_Resized, size);
+	else
+	{
+		cv::Mat image_Flipped;
+		cv::flip(image_In, image_Flipped, 1);
+		cv::Size size(nPhi, nTheta);
+		cv::resize(image_Flipped, image_Out, size);
+	}
 
 	fReal linearDensity = sqrt(particleDensity);
 	fReal delta = M_PI / nTheta / linearDensity;
@@ -66,12 +61,21 @@ KaminoParticles::KaminoParticles(std::string path, fReal particleDensity, fReal 
 			coordCPUBuffer[2 * index] = phi;
 			coordCPUBuffer[2 * index + 1] = theta;
 			
-			// initialize velocities (0,0)
-			cv::Point3_<uchar>* p = image_Flipped.ptr<cv::Point3_<uchar>>(y, x);
-			// define particle color
-			colorBGR[3 * index] = p->y / 255.0;
-			colorBGR[3 * index + 1] = p->z / 255.0;
-			colorBGR[3 * index + 2] = p->x / 255.0;
+			if (image_In.data)
+			{
+				// initialize velocities (0,0)
+				cv::Point3_<uchar>* p = image_Out.ptr<cv::Point3_<uchar>>(y, x);
+				// define particle color
+				colorBGR[3 * index] = p->y / 255.0;
+				colorBGR[3 * index + 1] = p->z / 255.0;
+				colorBGR[3 * index + 2] = p->x / 255.0;
+			}
+			else
+			{
+				colorBGR[3 * index] = 0.0;
+				colorBGR[3 * index + 1] = 0.0;
+				colorBGR[3 * index + 2] = 0.0;
+			}
 		}
 	}
 
@@ -89,14 +93,20 @@ KaminoParticles::~KaminoParticles()
 
 void KaminoParticles::copy2GPU()
 {
-	checkCudaErrors(cudaMemcpy(this->coordGPUThisStep, this->coordCPUBuffer,
-		sizeof(fReal) * numOfParticles * 2, cudaMemcpyHostToDevice));
+	if (numOfParticles != 0)
+	{
+		checkCudaErrors(cudaMemcpy(this->coordGPUThisStep, this->coordCPUBuffer,
+			sizeof(fReal) * numOfParticles * 2, cudaMemcpyHostToDevice));
+	}
 }
 
 void KaminoParticles::copyBack2CPU()
 {
-	checkCudaErrors(cudaMemcpy(this->coordCPUBuffer, this->coordGPUThisStep,
-		sizeof(fReal) * numOfParticles * 2, cudaMemcpyDeviceToHost));
+	if (numOfParticles != 0)
+	{
+		checkCudaErrors(cudaMemcpy(this->coordCPUBuffer, this->coordGPUThisStep,
+			sizeof(fReal) * numOfParticles * 2, cudaMemcpyDeviceToHost));
+	}
 }
 
 void KaminoParticles::swapGPUBuffers()

@@ -6,7 +6,7 @@ void KaminoSolver::initialize_velocity()
 	KaminoQuantity* u = this->velPhi;
 	KaminoQuantity* v = this->velTheta;
 
-	fReal gain = 4096.0 * 3.0 / nPhi;
+	fReal gain = 4096.0 / nPhi;
 
 	for (size_t j = 0; j < u->getNTheta(); ++j)
 	{
@@ -55,7 +55,7 @@ void KaminoSolver::initialize_velocity()
 	}
 
 	// set u_theta initial values using FBM curl noise
-	for (size_t j = 0; j < v->getNTheta(); ++j)
+	for (size_t j = 1; j < v->getNTheta() + 1; ++j)
 	{
 		for (size_t i = 0; i < v->getNPhi(); ++i)
 		{
@@ -78,7 +78,7 @@ void KaminoSolver::initialize_velocity()
 			fReal noiseDy_u = -1 * (noise_ur - noise_ul) / (radius * gridLen);
 			fReal noiseDy_d = -1 * (noise_lr - noise_ll) / (radius * gridLen);
 			fReal avgNoise = (noiseDy_u + noiseDy_d) / 2.0;
-			v->setCPUValueAt(i, j, avgNoise * gain);
+			v->setCPUValueAt(i, j - 1, avgNoise * gain);
 		}
 	}
 	copyVelocity2GPU();
