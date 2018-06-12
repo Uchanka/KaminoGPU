@@ -908,5 +908,5 @@ void Kamino::run()
 # endif
 
 	std::cout << "Time spent: " << gpu_time << "ms" << std::endl;
-	std::cout << "Performance: " << 1000.0 * frames / gpu_time << " steps per second" << std::endl;
+	std::cout << "Performance: " << 1000.0 * frames / gpu_time << " frames per second" << std::endl;
 }

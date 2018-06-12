@@ -86,11 +86,12 @@ KaminoSolver::~KaminoSolver()
 	delete this->pressure;
 	delete this->density;
 
-	checkCudaErrors(cudaDeviceReset());
-
 # ifdef WRITE_PARTICLES
 	delete this->particles;
 # endif
+
+	checkCudaErrors(cudaDeviceReset());
+
 # ifdef PERFORMANCE_BENCHMARK
 	float totalTimeUsed = this->advectionTime + this->geometricTime + this->projectionTime;
 	std::cout << "Total time used for advection : " << this->advectionTime << std::endl;
