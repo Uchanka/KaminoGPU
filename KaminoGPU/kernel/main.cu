@@ -55,5 +55,6 @@ int main(int argc, char** argv)
 		std::cout << "Please provide the path to configKamino.txt as an argument." << std::endl;
 		std::cout << "Usage example: ./kamino.exe ./configKamino.txt" << std::endl;
 		std::cout << "Configuration file was missing, exiting." << std::endl;
+		return -1;
 	}
 }
