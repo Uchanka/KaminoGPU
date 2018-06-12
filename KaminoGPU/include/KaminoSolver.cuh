@@ -68,6 +68,10 @@ private:
 	fReal timeStep;
 	fReal timeElapsed;
 
+	float advectionTime;
+	float geometricTime;
+	float projectionTime;
+
 	/// Kernel calling from here
 	void advection();
 	void geometric();

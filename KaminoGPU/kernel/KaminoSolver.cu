@@ -1,5 +1,6 @@
 # include "../include/KaminoSolver.cuh"
 # include "../opencv_headers/opencv2/opencv.hpp"
+# include "../include/KaminoTimer.cuh"
 
 // CONSTRUCTOR / DESTRUCTOR >>>>>>>>>>
 
@@ -11,7 +12,7 @@ static __constant__ fReal gridLenGlobal;
 KaminoSolver::KaminoSolver(size_t nPhi, size_t nTheta, fReal radius, fReal frameDuration,
 	fReal A, int B, int C, int D, int E) :
 	nPhi(nPhi), nTheta(nTheta), radius(radius), gridLen(M_2PI / nPhi), invGridLen(1.0 / gridLen), frameDuration(frameDuration),
-	timeStep(0.0), timeElapsed(0.0),
+	timeStep(0.0), timeElapsed(0.0), advectionTime(0.0), geometricTime(0.0), projectionTime(0.0),
 	A(A), B(B), C(C), D(D), E(E)
 {
 	/// FIXME: Should we detect and use device 0?
@@ -87,7 +88,18 @@ KaminoSolver::~KaminoSolver()
 
 	checkCudaErrors(cudaDeviceReset());
 
-	//delete this->particles;
+# ifdef WRITE_PARTICLES
+	delete this->particles;
+# endif
+# ifdef PERFORMANCE_BENCHMARK
+	float totalTimeUsed = this->advectionTime + this->geometricTime + this->projectionTime;
+	std::cout << "Total time used for advection : " << this->advectionTime << std::endl;
+	std::cout << "Total time used for geometric : " << this->geometricTime << std::endl;
+	std::cout << "Total time used for projection : " << this->projectionTime << std::endl;
+	std::cout << "Percentage of advection : " << advectionTime / totalTimeUsed * 100.0f << "%" << std::endl;
+	std::cout << "Percentage of geometric : " << geometricTime / totalTimeUsed * 100.0f << "%" << std::endl;
+	std::cout << "Percentage of projection : " << projectionTime / totalTimeUsed * 100.0f << "%" << std::endl;
+# endif
 }
 
 void KaminoSolver::copyVelocity2GPU()
@@ -185,9 +197,24 @@ void KaminoSolver::stepForward(fReal timeStep)
 {
 	this->timeStep = timeStep;
 
+# ifdef PERFORMANCE_BENCHMARK
+	KaminoTimer timer;
+	timer.startTimer();
+# endif
 	advection();
+# ifdef PERFORMANCE_BENCHMARK
+	this->advectionTime += timer.stopTimer() * 0.001f;
+	timer.startTimer();
+# endif
 	geometric();
+# ifdef PERFORMANCE_BENCHMARK
+	this->geometricTime += timer.stopTimer() * 0.001f;
+	timer.startTimer();
+# endif
 	projection();
+# ifdef PERFORMANCE_BENCHMARK
+	this->projectionTime += timer.stopTimer() * 0.001f;
+# endif
 
 	this->timeElapsed += timeStep;
 }

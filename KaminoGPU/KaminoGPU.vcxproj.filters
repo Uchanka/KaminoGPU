@@ -27,6 +27,9 @@
     <ClInclude Include="include\KaminoParticles.cuh">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\KaminoTimer.cuh">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="kernel\tdm.cu">
@@ -44,16 +47,16 @@
     <CudaCompile Include="kernel\main.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="kernel\KaminoGPU.cu">
-      <Filter>kernel</Filter>
-    </CudaCompile>
     <CudaCompile Include="kernel\vectorUtil.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel\KaminoParticles.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
-    <CudaCompile Include="kernel\KaminoAdvection.cu">
+    <CudaCompile Include="kernel\KaminoCore.cu">
+      <Filter>kernel</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel\KaminoTimer.cu">
       <Filter>kernel</Filter>
     </CudaCompile>
   </ItemGroup>

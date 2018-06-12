@@ -1,5 +1,6 @@
 # include "KaminoSolver.cuh"
 # include "../include/KaminoGPU.cuh"
+# include "../include/KaminoTimer.cuh"
 
 static __constant__ size_t nPhiGlobal;
 static __constant__ size_t nThetaGlobal;
@@ -860,7 +861,9 @@ void Kamino::run()
 {
 	KaminoSolver solver(nPhi, nTheta, radius, dt, A, B, C, D, E);
 	solver.initDensityfromPic(densityImage);
+# ifdef WRITE_PARTICLES
 	solver.initParticlesfromPic(colorImage, this->particleDensity);
+# endif
 
 	checkCudaErrors(cudaMemcpyToSymbol(nPhiGlobal, &(this->nPhi), sizeof(size_t)));
 	checkCudaErrors(cudaMemcpyToSymbol(nThetaGlobal, &(this->nTheta), sizeof(size_t)));
@@ -868,17 +871,16 @@ void Kamino::run()
 	checkCudaErrors(cudaMemcpyToSymbol(timeStepGlobal, &(this->dt), sizeof(fReal)));
 	checkCudaErrors(cudaMemcpyToSymbol(gridLenGlobal, &(this->gridLen), sizeof(fReal)));
 
-	cudaEvent_t start, stop;
-	float gpu_time = 0.0f;
-	checkCudaErrors(cudaEventCreate(&start));
-	checkCudaErrors(cudaEventCreate(&stop));
-	cudaEventRecord(start, 0);
-
 # ifdef WRITE_VELOCITY_DATA
 	solver.write_data_bgeo(gridPath, 0);
 # endif
 # ifdef WRITE_PARTICLES
 	solver.write_particles_bgeo(particlePath, 0);
+# endif
+
+# ifdef PERFORMANCE_BENCHMARK
+	KaminoTimer timer;
+	timer.startTimer();
 # endif
 
 	float T = 0.0;              // simulation time
@@ -901,13 +903,10 @@ void Kamino::run()
 # endif
 	}
 
-	cudaEventRecord(stop, 0);
-	cudaEventSynchronize(stop);
+# ifdef PERFORMANCE_BENCHMARK
+	float gpu_time = timer.stopTimer();
+# endif
 
-
-	checkCudaErrors(cudaEventElapsedTime(&gpu_time, start, stop));
 	std::cout << "Time spent: " << gpu_time << "ms" << std::endl;
 	std::cout << "Performance: " << 1000.0 * frames / gpu_time << " steps per second" << std::endl;
-	cudaEventDestroy(start);
-	cudaEventDestroy(stop);
 }
