@@ -30,7 +30,6 @@ link_directories(./lib)
    
 cuda_add_executable(kamino
    ./kernel/KaminoCore.cu
-   ./kernel/KaminoGPU.cu
    ./kernel/KaminoInitializer.cu
    ./kernel/KaminoParticles.cu
    ./kernel/KaminoQuantity.cu
