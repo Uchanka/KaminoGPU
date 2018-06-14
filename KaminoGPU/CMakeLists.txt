@@ -29,12 +29,13 @@ link_directories(./lib)
    message("arch=61")
    
 cuda_add_executable(kamino
-   ./kernel/KaminoAdvection.cu
+   ./kernel/KaminoCore.cu
    ./kernel/KaminoGPU.cu
    ./kernel/KaminoInitializer.cu
    ./kernel/KaminoParticles.cu
    ./kernel/KaminoQuantity.cu
    ./kernel/KaminoSolver.cu
+   ./kernel/KaminoTimer.cu
    ./kernel/main.cu
    ./kernel/tdm.cu
    ./kernel/vectorUtil.cu
