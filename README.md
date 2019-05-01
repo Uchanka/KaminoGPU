@@ -1,4 +1,4 @@
-GPU implementation of project Kamino, a fluid solver on spherical coordinates.
+GPU implementation of [my SIGGRAPH I3D paper](http://i3dsymposium.github.io/2019/papers.html#Papers1).
 
 Usage: ./KaminoGPU.exe configKamino.txt
 
