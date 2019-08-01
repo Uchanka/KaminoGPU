@@ -90,7 +90,7 @@ __device__ fReal sampleVTheta(fReal* input, fReal phiRaw, fReal thetaRaw, size_t
 	// Phi and Theta are now shifted back to origin
 
 	fReal invGridLen = 1.0 / gridLenGlobal;
-	bool isFlippedPole = validateCoord(phi, theta);
+	fReal isFlippedPole = validateCoord(phi, theta);
 	fReal normedPhi = phi * invGridLen;
 	fReal normedTheta = theta * invGridLen;
 
@@ -140,7 +140,7 @@ __device__ fReal sampleCentered(fReal* input, fReal phiRaw, fReal thetaRaw, size
 	// Phi and Theta are now shifted back to origin
 
 	fReal invGridLen = 1.0 / gridLenGlobal;
-	bool isFlippedPole = validateCoord(phi, theta);
+	fReal isFlippedPole = validateCoord(phi, theta);
 	fReal normedPhi = phi * invGridLen;
 	fReal normedTheta = theta * invGridLen;
 
